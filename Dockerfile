@@ -15,6 +15,7 @@ ENV NEXT_PUBLIC_APP_NAME="Aegis OS"
 COPY frontend/package.json ./
 RUN npm install
 COPY frontend/ ./
+RUN mkdir -p /app/public && touch /app/public/.gitkeep
 RUN npm run build
 
 # ── Stage 2: Final runtime image ─────────────
