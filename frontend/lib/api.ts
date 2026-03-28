@@ -4,10 +4,11 @@ import type {
   CaseDetail,
   CaseMode,
   DashboardSummary,
+  DetectedCaseType,
   QueueCase
 } from "@/lib/types";
 
-const API_BASE = "/api/v1";
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "/api/v1").replace(/\/$/, "");
 
 type ValidationDetail = {
   loc?: Array<string | number>;
@@ -122,6 +123,14 @@ export async function getCase(caseId: string) {
   return request<CaseDetail>(`/cases/${caseId}`);
 }
 
+export async function updateCase(caseId: string, payload: Partial<Pick<CaseDetail, "raw_input">> & { mode?: CaseMode }) {
+  return request<CaseDetail>(`/cases/${caseId}`, {
+    method: "PATCH",
+    headers: toJsonHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function listCases() {
   return request<QueueCase[]>("/cases");
 }
@@ -130,27 +139,45 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   return request<DashboardSummary>("/dashboard/summary");
 }
 
-export type NearbyHospital = {
+export function getDashboardIncidentMapUrl() {
+  return `${API_BASE}/dashboard/incident-map`;
+}
+
+export type NearbyResource = {
   name: string;
   address: string;
   lat: number;
   lng: number;
   place_id: string;
+  google_maps_uri?: string | null;
+  resource_type: string;
+  phone_number?: string | null;
   rating: number | null;
   open_now: boolean | null;
+  primary_type?: string | null;
 };
 
 export type NearbySearchResult = {
   query_location: string;
+  case_type: DetectedCaseType;
   lat: number | null;
   lng: number | null;
-  hospitals: NearbyHospital[];
+  hospitals: NearbyResource[];
+  clinics: NearbyResource[];
+  ambulance_services: NearbyResource[];
+  safe_houses: NearbyResource[];
 };
 
-export async function getNearbyHospitals(caseId: string) {
-  return request<NearbySearchResult>(`/cases/${caseId}/nearby-hospitals`);
+export async function getNearbyResources(caseId: string) {
+  return request<NearbySearchResult>(`/cases/${caseId}/nearby-resources`);
 }
 
-export async function searchNearby(location: string) {
-  return request<NearbySearchResult>(`/nearby?location=${encodeURIComponent(location)}`);
+export async function searchNearby(location: string, caseType: DetectedCaseType = "unclear") {
+  return request<NearbySearchResult>(
+    `/nearby?location=${encodeURIComponent(location)}&case_type=${encodeURIComponent(caseType)}`
+  );
+}
+
+export function getCaseResourceMapUrl(caseId: string) {
+  return `${API_BASE}/cases/${caseId}/resource-map`;
 }

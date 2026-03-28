@@ -32,7 +32,7 @@ _SECURITY_HEADERS: dict[str, str] = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "same-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Permissions-Policy": "camera=(), microphone=(self), geolocation=(self)",
     "Cache-Control": "no-store",
     "Content-Security-Policy": (
         "default-src 'self'; "
@@ -95,7 +95,11 @@ class GeminiGuardMiddleware(BaseHTTPMiddleware):
                 },
             )
         response = await call_next(request)
-        response.headers["X-AI-Provider"] = "gemini" if self.gemini_configured else "demo-fallback"
+        response.headers["X-AI-Provider"] = (
+            "gemini"
+            if self.gemini_configured
+            else "test-fallback" if self.allow_demo_fallback else "gemini-unconfigured"
+        )
         return response
 
 

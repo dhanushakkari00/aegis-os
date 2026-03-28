@@ -24,6 +24,7 @@ def health(db: Session = Depends(get_db)) -> dict[str, object]:
     Checks:
     * **Database** — executes a trivial query to confirm connectivity.
     * **Gemini** — reports whether the API key is configured.
+    * **Google Maps** — reports whether resource routing lookups are configured.
     * **GCS** — reports whether artifact storage is configured.
     * **Cloud SQL** — reports whether the managed connector is active.
     * **Cloud Logging** — reports whether the GCP project is set.
@@ -55,6 +56,7 @@ def health(db: Session = Depends(get_db)) -> dict[str, object]:
         "services": {
             "database": db_status,
             "gemini": "configured" if settings.google_genai_api_key else "not_configured",
+            "google_maps": "configured" if settings.google_maps_api_key else "not_configured",
             "gcs_artifact_storage": gcs_status,
             "cloud_sql_connector": "enabled" if settings.cloud_sql_use_connector else "disabled",
             "cloud_logging": "enabled" if settings.google_cloud_project else "disabled",

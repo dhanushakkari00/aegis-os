@@ -4,7 +4,7 @@ import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { HeartPulse, MountainSnow, Send } from "lucide-react";
+import { Send } from "lucide-react";
 
 import { FileDropzone } from "@/components/file-dropzone";
 import { ModeSwitcher } from "@/components/mode-switcher";
@@ -12,30 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { createCase, uploadCaseArtifact } from "@/lib/api";
-import { disasterSeedInput, medicalSeedInput } from "@/lib/demo-data";
-import type { CaseMode } from "@/lib/types";
 import {
   composeRawInput,
   intakeSchema,
   type IntakeFormValues
 } from "@/lib/validators";
-
-const seedModes: { label: string; value: string; rawInput: string; mode: CaseMode; icon: typeof HeartPulse }[] = [
-  {
-    label: "Medical demo",
-    value: "medical",
-    rawInput: medicalSeedInput,
-    mode: "medical_triage",
-    icon: HeartPulse
-  },
-  {
-    label: "Disaster demo",
-    value: "disaster",
-    rawInput: disasterSeedInput,
-    mode: "disaster_response",
-    icon: MountainSnow
-  }
-];
 
 export function IntakeComposer() {
   const router = useRouter();
@@ -129,36 +110,11 @@ export function IntakeComposer() {
           <div className="space-y-4">
             <FileDropzone files={files} onFilesChange={setFiles} />
             <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Seed demos</p>
-              <div className="mt-4 grid gap-3">
-                {seedModes.map((seed) => {
-                  const Icon = seed.icon;
-                  return (
-                    <button
-                      key={seed.value}
-                      type="button"
-                      onClick={() => {
-                        form.reset({
-                          mode: seed.mode,
-                          narrative: seed.rawInput,
-                          voiceTranscript: "",
-                          mixedNotes: ""
-                        });
-                        setFiles([]);
-                      }}
-                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-ink/70 p-4 text-left transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/70"
-                    >
-                      <div className="rounded-2xl border border-cyan/20 bg-cyan/10 p-3 text-cyan">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-white">{seed.label}</p>
-                        <p className="line-clamp-2 text-sm text-slate-300">{seed.rawInput}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <p className="text-xs uppercase tracking-[0.24em] text-cyan">Production Intake</p>
+              <p className="mt-3 text-sm leading-7 text-slate-300">
+                This surface only launches real cases. Use the narrative, transcript, mixed notes,
+                and uploaded evidence to start a production analysis flow.
+              </p>
             </div>
           </div>
         </div>

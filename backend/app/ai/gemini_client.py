@@ -3,9 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.core.config import Settings
-from app.schemas.analysis import NormalizedAnalysisOutput
 from app.ai.types import ArtifactInput
+from app.core.config import Settings
+from app.core.logging import get_logger
+from app.schemas.analysis import NormalizedAnalysisOutput
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -67,8 +70,8 @@ class GeminiClient:
             for uploaded in uploaded_files:
                 try:
                     client.files.delete(name=uploaded.name)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to delete uploaded Gemini file %s: %s", uploaded.name, exc)
         text = getattr(response, "text", "") or ""
         raw = response.to_json_dict() if hasattr(response, "to_json_dict") else {"text": text}
         return GeminiResponse(text=text, raw=raw)

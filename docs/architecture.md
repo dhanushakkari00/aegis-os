@@ -31,7 +31,7 @@ Aegis OS is split into two deployable services:
 
 - `app/`: App Router routes for intake, analysis, dashboard, case details, and about
 - `components/`: reusable command-center UI components
-- `lib/`: API client, demo seeds, chart formatting, validation, and utilities
+- `lib/`: API client, chart formatting, validation, and utilities
 - `hooks/`: reduced-motion and local preference hooks
 
 ## Privacy and Safety

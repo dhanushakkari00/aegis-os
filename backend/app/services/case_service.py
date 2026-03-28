@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.ai.types import ArtifactInput
 from app.ai.orchestrator import AIOrchestrator, serialize_analysis_output
+from app.ai.types import ArtifactInput
 from app.core.config import Settings
 from app.models.analysis_run import AnalysisRun
 from app.models.case import Case
@@ -89,6 +91,11 @@ class CaseService:
                 )
             )
         artifact_context = "\n".join(artifact_lines) if artifact_lines else "No uploaded artifacts."
+        previous_analysis_context = (
+            json.dumps(case.structured_result_json, indent=2)
+            if case.structured_result_json is not None
+            else "No previous analysis exists for this case."
+        )
 
         try:
             prompt_name, latency_ms, raw_response, output = self.orchestrator.analyze(
@@ -96,6 +103,7 @@ class CaseService:
                 raw_input=case.raw_input,
                 artifact_context=artifact_context,
                 artifacts=artifact_inputs,
+                previous_analysis_context=previous_analysis_context,
             )
         except Exception as exc:
             db.add(

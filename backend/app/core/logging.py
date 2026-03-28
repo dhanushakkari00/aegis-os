@@ -29,9 +29,12 @@ def configure_logging(level: str = "INFO") -> None:
             client.setup_logging(log_level=log_level)
             logging.getLogger().info("Cloud Logging integration active.")
             return
-        except Exception:
+        except Exception as exc:
             # Fall through to standard logging on any import / auth error.
-            pass
+            logging.getLogger(__name__).warning(
+                "Cloud Logging integration unavailable, falling back to standard logging: %s",
+                exc,
+            )
 
     logging.basicConfig(
         level=log_level,

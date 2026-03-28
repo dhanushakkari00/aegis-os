@@ -41,6 +41,24 @@ def test_upload_text_artifact(client) -> None:
     assert "Water still rising" in artifacts[0]["content_excerpt"]
 
 
+def test_upload_recorded_audio_artifact(client) -> None:
+    create_response = client.post(
+        "/api/v1/cases",
+        json={"mode": "medical_triage", "raw_input": MEDICAL_DEMO},
+    )
+    case_id = create_response.json()["id"]
+
+    upload_response = client.post(
+        f"/api/v1/cases/{case_id}/upload",
+        files={"file": ("voice-note.webm", b"fake-webm-audio", "audio/webm;codecs=opus")},
+        data={"artifact_type": "audio"},
+    )
+    assert upload_response.status_code == 200
+    artifact = upload_response.json()["artifacts"][0]
+    assert artifact["artifact_type"] == "audio"
+    assert artifact["mime_type"] == "audio/webm"
+
+
 def test_dashboard_summary(client) -> None:
     client.post("/api/v1/cases", json={"mode": "medical_triage", "raw_input": MEDICAL_DEMO})
     client.post("/api/v1/cases", json={"mode": "disaster_response", "raw_input": DISASTER_DEMO})

@@ -18,9 +18,11 @@ export function RecommendationCard({ action }: { action: RecommendedActionItem }
         </div>
       </div>
       <p className="text-sm leading-6 text-slate-200">{action.description}</p>
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-        <span className="font-medium text-white">Why this matters:</span> {action.rationale}
-      </div>
+      {action.rationale ? (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+          <span className="font-medium text-white">Why this matters:</span> {action.rationale}
+        </div>
+      ) : null}
       <div className="mt-auto flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-cyan">
         <ArrowRight className="h-3.5 w-3.5" />
         {action.category}
@@ -29,4 +31,3 @@ export function RecommendationCard({ action }: { action: RecommendedActionItem }
     </Card>
   );
 }
-

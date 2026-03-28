@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 FILENAME_SAFE_CHARS = re.compile(r"[^a-zA-Z0-9._-]+")
 
 

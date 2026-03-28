@@ -22,3 +22,9 @@ def test_health_reports_gcs_status(client) -> None:
     response = client.get("/api/v1/health")
     payload = response.json()
     assert payload["services"]["gcs_artifact_storage"] in ("ok", "not_configured", "error")
+
+
+def test_health_reports_google_maps_status(client) -> None:
+    response = client.get("/api/v1/health")
+    payload = response.json()
+    assert payload["services"]["google_maps"] in ("configured", "not_configured")

@@ -14,8 +14,7 @@ import { RecommendationCard } from "@/components/recommendation-card";
 import { UrgencyBadge } from "@/components/urgency-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { analyzeCase, createCase, getCase } from "@/lib/api";
-import { medicalSeedInput } from "@/lib/demo-data";
+import { analyzeCase, getCase } from "@/lib/api";
 import type { CaseDetail } from "@/lib/types";
 import { formatTimestamp } from "@/lib/utils";
 
@@ -34,13 +33,10 @@ export default function AnalyzePage() {
       setLoading(true);
       setError(null);
       try {
-        let activeId = caseId;
-        if (!activeId) {
-          const seeded = await createCase({
-            mode: "medical_triage",
-            raw_input: medicalSeedInput
-          });
-          activeId = seeded.id;
+        if (!caseId) {
+          setCaseData(null);
+          setLoading(false);
+          return;
         }
 
         for (let current = 0; current < 5; current += 1) {
@@ -51,9 +47,9 @@ export default function AnalyzePage() {
           await new Promise((resolve) => window.setTimeout(resolve, 180));
         }
 
-        const existing = await getCase(activeId);
+        const existing = await getCase(caseId);
         const analyzed =
-          existing.structured_result_json === null ? await analyzeCase(activeId) : existing;
+          existing.structured_result_json === null ? await analyzeCase(caseId) : existing;
         if (!cancelled) {
           setCaseData(analyzed);
           setStep(4);
@@ -106,6 +102,21 @@ export default function AnalyzePage() {
       </section>
 
       <AnalysisPipeline activeStep={step} loading={loading} />
+
+      {!caseId ? (
+        <Card className="p-6">
+          <p className="font-medium text-white">No case selected</p>
+          <p className="mt-2 text-sm text-slate-300">
+            Start a real intake from the main command surface, then open the live analysis view for
+            that case.
+          </p>
+          <div className="mt-4">
+            <Button asChild variant="secondary">
+              <Link href="/">Go to intake</Link>
+            </Button>
+          </div>
+        </Card>
+      ) : null}
 
       {error ? (
         <Card className="border-critical/30 bg-critical/10 p-6" role="alert">

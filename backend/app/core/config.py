@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -23,13 +24,14 @@ class Settings(BaseSettings):
     debug: str | bool = False
     log_level: str = "INFO"
     frontend_origin: str = "http://localhost:3000"
+    secret_key: str | None = None
 
     database_url: str = Field(default="sqlite:///./aegis_os.db")
     postgres_server: str = "localhost"
     postgres_port: int = 5432
     postgres_db: str = "aegis_os"
     postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
+    postgres_password: str = ""
     cloud_sql_connection_name: str | None = None
     cloud_sql_use_connector: bool = False
     allow_demo_fallback: bool = False
@@ -82,11 +84,15 @@ class Settings(BaseSettings):
         raise ValueError(f"Unsupported boolean value: {value}")
 
     @model_validator(mode="after")
-    def validate_settings(self) -> "Settings":
+    def validate_settings(self) -> Settings:
         if self.max_upload_size_mb <= 0:
             raise ValueError("MAX_UPLOAD_SIZE_MB must be positive.")
         if self.cloud_sql_use_connector and not self.cloud_sql_connection_name:
             raise ValueError("CLOUD_SQL_CONNECTION_NAME is required when connector mode is enabled.")
+        if self.app_env.lower() == "production" and not self.secret_key:
+            raise ValueError("SECRET_KEY must be set explicitly in production.")
+        if not self.secret_key:
+            self.secret_key = secrets.token_urlsafe(48)
         return self
 
 

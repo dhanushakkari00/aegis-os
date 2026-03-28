@@ -15,6 +15,7 @@ def test_security_headers_present(client) -> None:
     assert "Strict-Transport-Security" in response.headers
     assert "X-Request-ID" in response.headers
     assert "X-Response-Time-Ms" in response.headers
+    assert response.headers.get("Permissions-Policy") == "camera=(), microphone=(self), geolocation=(self)"
 
 
 def test_csp_header_blocks_frames(client) -> None:
@@ -69,7 +70,7 @@ def test_update_case(client) -> None:
 
 def test_invalid_input_returns_422(client) -> None:
     """Creating a case with too-short input should return 422."""
-    response = client.post("/api/v1/cases", json={"mode": "auto_detect", "raw_input": "hi"})
+    response = client.post("/api/v1/cases", json={"mode": "auto_detect", "raw_input": "   "})
     assert response.status_code == 422
 
 

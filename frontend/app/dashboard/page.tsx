@@ -6,7 +6,7 @@ import { CaseQueueCard } from "@/components/case-queue-card";
 import { IncidentMapCard } from "@/components/incident-map-card";
 import { SeverityDistributionCard } from "@/components/severity-distribution-card";
 import { Card } from "@/components/ui/card";
-import { getDashboardSummary } from "@/lib/api";
+import { getDashboardIncidentMapUrl, getDashboardSummary } from "@/lib/api";
 import type { DashboardSummary } from "@/lib/types";
 
 export default function DashboardPage() {
@@ -53,7 +53,14 @@ export default function DashboardPage() {
         <>
           <section className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
             <SeverityDistributionCard buckets={summary.severity_distribution} />
-            <IncidentMapCard pulses={summary.incident_pulses} />
+            <IncidentMapCard
+              pulses={summary.incident_pulses}
+              mapPreviewUrl={
+                summary.incident_pulses.some((pulse) => pulse.lat != null && pulse.lng != null)
+                  ? getDashboardIncidentMapUrl()
+                  : undefined
+              }
+            />
           </section>
           <CaseQueueCard cases={summary.queue} />
         </>

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "20260328_0001"
 down_revision = None
@@ -12,6 +13,19 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.create_table(
+        "users",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=False),
+        sa.Column("username", sa.String(length=100), nullable=False),
+        sa.Column("hashed_password", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index("ix_users_email", "users", ["email"], unique=True)
+    op.create_index("ix_users_username", "users", ["username"], unique=True)
+
     op.create_table(
         "cases",
         sa.Column("id", sa.String(length=36), nullable=False),
@@ -22,11 +36,14 @@ def upgrade() -> None:
         sa.Column("confidence", sa.Float(), nullable=False),
         sa.Column("structured_result_json", sa.JSON(), nullable=True),
         sa.Column("handoff_summary", sa.Text(), nullable=True),
+        sa.Column("owner_id", sa.String(length=36), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["owner_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_cases_created_at", "cases", ["created_at"])
+    op.create_index("ix_cases_owner_id", "cases", ["owner_id"], unique=False)
 
     op.create_table(
         "analysis_runs",
@@ -82,5 +99,9 @@ def downgrade() -> None:
     op.drop_table("recommended_actions")
     op.drop_table("artifacts")
     op.drop_table("analysis_runs")
+    op.drop_index("ix_cases_owner_id", table_name="cases")
     op.drop_index("ix_cases_created_at", table_name="cases")
     op.drop_table("cases")
+    op.drop_index("ix_users_username", table_name="users")
+    op.drop_index("ix_users_email", table_name="users")
+    op.drop_table("users")

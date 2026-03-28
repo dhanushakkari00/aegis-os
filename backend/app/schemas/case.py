@@ -10,20 +10,20 @@ from app.schemas.enums import CaseMode, DetectedCaseType, UrgencyLevel
 
 class CaseCreate(BaseModel):
     mode: CaseMode = CaseMode.AUTO_DETECT
-    raw_input: str = Field(min_length=10, max_length=8000)
+    raw_input: str = Field(min_length=1, max_length=8000)
 
     @field_validator("raw_input")
     @classmethod
     def normalize_input(cls, value: str) -> str:
         normalized = value.strip()
-        if len(normalized) < 10:
-            raise ValueError("Case intake must contain at least 10 characters.")
+        if len(normalized) < 1:
+            raise ValueError("Case intake cannot be empty.")
         return normalized
 
 
 class CaseUpdate(BaseModel):
     mode: CaseMode | None = None
-    raw_input: str | None = Field(default=None, min_length=10, max_length=8000)
+    raw_input: str | None = Field(default=None, min_length=1, max_length=8000)
 
     @field_validator("raw_input")
     @classmethod
@@ -31,8 +31,8 @@ class CaseUpdate(BaseModel):
         if value is None:
             return value
         normalized = value.strip()
-        if len(normalized) < 10:
-            raise ValueError("Case intake must contain at least 10 characters.")
+        if len(normalized) < 1:
+            raise ValueError("Case intake cannot be empty.")
         return normalized
 
 
@@ -123,6 +123,8 @@ class LocationPulse(BaseModel):
     label: str
     severity: UrgencyLevel
     note: str
+    lat: float | None = None
+    lng: float | None = None
 
 
 class DashboardSummaryResponse(BaseModel):

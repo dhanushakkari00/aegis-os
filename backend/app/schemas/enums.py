@@ -27,3 +27,8 @@ class AnalysisRunStatus(str, Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
 
+
+class DecisionState(str, Enum):
+    NEEDS_CLARIFICATION = "needs_clarification"
+    PROVISIONAL = "provisional"
+    FINAL = "final"

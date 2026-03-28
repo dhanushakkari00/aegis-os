@@ -24,6 +24,9 @@ services:
     container_name: aegis-os-backend
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/aegis_os
+      FRONTEND_ORIGIN: http://localhost:3000
     ports:
       - "8000:8000"
     depends_on:
@@ -33,6 +36,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        INTERNAL_API_ORIGIN: http://backend:8000
     container_name: aegis-os-frontend
     env_file:
       - .env
@@ -43,4 +48,3 @@ services:
 
 volumes:
   postgres_data:
-

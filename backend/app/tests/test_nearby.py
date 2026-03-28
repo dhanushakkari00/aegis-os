@@ -30,3 +30,28 @@ def test_standalone_nearby_with_location(client) -> None:
     payload = response.json()
     assert payload["query_location"] == "New York"
     assert "hospitals" in payload
+    assert "clinics" in payload
+    assert "ambulance_services" in payload
+    assert "safe_houses" in payload
+    assert payload["case_type"] == "unclear"
+
+
+def test_case_nearby_resources_uses_browser_coordinates_from_raw_input(client) -> None:
+    """Browser-shared coordinates should allow nearby lookup even if no geocoded text exists."""
+    create_response = client.post(
+        "/api/v1/cases",
+        json={
+            "mode": "auto_detect",
+            "raw_input": (
+                "Hi\n\nDevice location shared by browser: latitude 12.971599, "
+                "longitude 77.594566, accuracy 8m, captured_at 2026-03-28T08:00:00Z."
+            ),
+        },
+    )
+    case_id = create_response.json()["id"]
+
+    response = client.get(f"/api/v1/cases/{case_id}/nearby-resources")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["lat"] == 12.971599
+    assert payload["lng"] == 77.594566

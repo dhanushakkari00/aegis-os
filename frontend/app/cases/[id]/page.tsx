@@ -8,16 +8,23 @@ import { HandoffSummaryCard } from "@/components/handoff-summary-card";
 import { JSONInspectorDrawer } from "@/components/json-inspector-drawer";
 import { MissingInfoPanel } from "@/components/missing-info-panel";
 import { RecommendationCard } from "@/components/recommendation-card";
+import { ResourcePanel } from "@/components/resource-panel";
 import { TimelinePanel } from "@/components/timeline-panel";
 import { UrgencyBadge } from "@/components/urgency-badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCase } from "@/lib/api";
+import {
+  getCase,
+  getCaseResourceMapUrl,
+  getNearbyResources,
+  type NearbySearchResult
+} from "@/lib/api";
 import type { CaseDetail } from "@/lib/types";
 
 export default function CaseDetailPage() {
   const params = useParams<{ id: string }>();
   const caseId = params.id;
   const [caseData, setCaseData] = useState<CaseDetail | null>(null);
+  const [resourceData, setResourceData] = useState<NearbySearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,11 +33,30 @@ export default function CaseDetailPage() {
       if (!caseId) {
         return;
       }
+      setResourceData(null);
       try {
         const data = await getCase(caseId);
         if (!cancelled) {
           setCaseData(data);
           setError(null);
+        }
+        if (
+          data.structured_result_json?.extracted_location ||
+          (data.structured_result_json?.location_lat != null &&
+            data.structured_result_json?.location_lng != null)
+        ) {
+          try {
+            const resources = await getNearbyResources(caseId);
+            if (!cancelled) {
+              setResourceData(resources);
+            }
+          } catch {
+            if (!cancelled) {
+              setResourceData(null);
+            }
+          }
+        } else if (!cancelled) {
+          setResourceData(null);
         }
       } catch (err) {
         if (!cancelled) {
@@ -80,6 +106,9 @@ export default function CaseDetailPage() {
         {caseData ? (
           <div className="flex flex-wrap items-center gap-3">
             <UrgencyBadge urgency={caseData.urgency_level} />
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.22em] text-slate-300">
+              {caseData.structured_result_json?.decision_state?.replaceAll("_", " ")}
+            </span>
             <JSONInspectorDrawer payload={caseData.structured_result_json} />
           </div>
         ) : null}
@@ -95,10 +124,28 @@ export default function CaseDetailPage() {
       {caseData ? (
         <>
           <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <HandoffSummaryCard
-              summary={caseData.handoff_summary}
-              disclaimers={caseData.structured_result_json?.disclaimers}
-            />
+            <div className="space-y-6">
+              <Card className="border-cyan/20 bg-cyan/10 p-6">
+                <p className="text-xs uppercase tracking-[0.24em] text-cyan">Assistant Reply</p>
+                <p className="mt-3 text-base leading-7 text-white">
+                  {caseData.structured_result_json?.assistant_response ?? caseData.handoff_summary}
+                </p>
+              </Card>
+
+              {caseData.structured_result_json?.final_verdict ? (
+                <Card className="p-6">
+                  <p className="text-xs uppercase tracking-[0.24em] text-signal">Final Verdict</p>
+                  <p className="mt-3 text-base leading-7 text-slate-100">
+                    {caseData.structured_result_json.final_verdict}
+                  </p>
+                </Card>
+              ) : null}
+
+              <HandoffSummaryCard
+                summary={caseData.handoff_summary}
+                disclaimers={caseData.structured_result_json?.disclaimers}
+              />
+            </div>
             <div className="space-y-6">
               <ConfidenceMeter confidence={caseData.confidence} />
               <Card>
@@ -123,6 +170,40 @@ export default function CaseDetailPage() {
               items={caseData.structured_result_json?.missing_information ?? []}
             />
           </section>
+
+          {(caseData.structured_result_json?.follow_up_questions.length ?? 0) > 0 ? (
+            <section>
+              <Card>
+                <CardHeader>
+                  <div>
+                    <CardTitle>Next Best Clarifications</CardTitle>
+                    <CardDescription>
+                      The model is limited to the highest-yield follow-up prompts.
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+                <div className="flex flex-wrap gap-2 px-6 pb-6">
+                  {caseData.structured_result_json!.follow_up_questions.map((question) => (
+                    <div
+                      key={question}
+                      className="rounded-full border border-cyan/20 bg-cyan/10 px-3 py-2 text-sm text-slate-100"
+                    >
+                      {question}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </section>
+          ) : null}
+
+          {resourceData ? (
+            <section>
+              <ResourcePanel
+                data={resourceData}
+                mapPreviewUrl={getCaseResourceMapUrl(caseId)}
+              />
+            </section>
+          ) : null}
 
           <section className="grid gap-6 lg:grid-cols-3">
             {caseData.recommended_actions.map((action) => (

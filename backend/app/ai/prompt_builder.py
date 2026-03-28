@@ -27,14 +27,16 @@ def build_system_instruction() -> str:
         "\n\nCORE PRINCIPLES:\n"
         "1. OUTPUT STRICT JSON ONLY. Never output markdown, prose, or explanations.\n"
         "2. NEVER invent facts. Use only information grounded in the input or attachments.\n"
-        "3. ALWAYS extract a specific location or address for dispatch. If none is explicit, "
-        "infer the most likely location and set confidence accordingly. Put the best location "
-        "string into 'extracted_location'. If coordinates are available, populate location_lat/lng.\n"
+        "3. Extract location only when it is explicit in text, transcript, document content, or "
+        "reliable artifact metadata. NEVER invent or guess an address. If missing, set "
+        "'extracted_location' to null and add a targeted follow-up question.\n"
         "4. Separate observed_facts from inferred_risks. Facts require evidence; risks are derived.\n"
         "5. Escalate urgency for explicit red flags or life-safety events aggressively.\n"
         "6. Be conservative with confidence scoring — never exceed evidence certainty.\n"
         "7. Keep handoff_summary concise, operational, and safe for human operators.\n"
-        "8. Populate missing_information for every critical unknown.\n"
+        "8. Populate missing_information only for the highest-yield unknowns.\n"
+        "9. follow_up_questions must be short, operator-ready, and phrased as direct questions.\n"
+        "10. Keep recommended action rationales concrete and non-empty when possible.\n"
         "\nMULTIMODAL FILE HANDLING:\n"
         "- Images: describe scene, injuries, hazards, signs, labels. Extract GPS EXIF if visible.\n"
         "- Audio: transcribe content verbatim, then extract medical/disaster facts from the transcript.\n"
@@ -48,6 +50,7 @@ def build_analysis_prompt(
     mode: CaseMode,
     raw_input: str,
     artifact_context: str,
+    previous_analysis_context: str,
 ) -> tuple[str, str]:
     """Build a mode-specific analysis prompt with the JSON schema.
 
@@ -65,11 +68,27 @@ STRICT OUTPUT RULES
 7. Make recommended_actions operational, safe, and prioritized.
 8. Keep concise_summary under 240 characters.
 9. Keep handoff_summary under 600 characters.
-10. ALWAYS populate extracted_location with a geocodable address, landmark, or area.
-    If the input mentions a location, address, sector, region, hospital, or any place name,
-    extract it. If none found, set extracted_location to null and add to missing_information.
-11. If coordinates (lat/lng) are available (e.g., from GPS or explicit mention), populate
-    location_lat and location_lng.
+10. assistant_response must sound like a calm, concise operator-facing chatbot reply.
+    If the case is unclear or incomplete, assistant_response should ask for the next best details.
+    If the case is urgent, assistant_response should clearly tell the user what to do now.
+11. final_verdict should be null until enough evidence exists for a useful operational decision.
+12. decision_state must be one of: needs_clarification, provisional, final.
+13. follow_up_questions must contain at most 3 concise questions. Only include questions that
+    materially change dispatch, triage, or safety decisions.
+14. For low/moderate sparse intakes, keep missing_information to the top 3 highest-yield gaps.
+    Do not ask for generic demographics or exhaustive medical history unless clearly relevant.
+15. For high/critical events, missing_information may include up to 5 items.
+16. Only populate extracted_location when the source explicitly provides a location or trustworthy
+    artifact metadata. Never guess a location from context alone.
+17. If coordinates (lat/lng) are available (e.g., from GPS or explicit mention), populate
+    location_lat and location_lng. Browser-shared device coordinates in the raw input count as
+    explicit GPS evidence and should be copied exactly.
+18. If the user's latest message is only a greeting or generic chat, set case_type to unclear,
+    decision_state to needs_clarification, and assistant_response should politely ask whether this
+    is a medical or disaster emergency and request the location.
+19. Every recommended action should have a short, concrete rationale when supported by evidence.
+20. When decision_state is final, final_verdict must be a crisp operational conclusion plus the
+    immediate next responder action.
 """.strip()
 
     if mode == CaseMode.MEDICAL_TRIAGE:
@@ -83,6 +102,10 @@ STRICT OUTPUT RULES
             "unresponsiveness, severe allergic reactions, altered consciousness → ESCALATE urgency\n"
             "• Safe immediate next steps for the operator\n"
             "• Location of the patient/incident for ambulance dispatch\n"
+            "• If the intake is sparse and non-red-flag, ask only the 2-3 most decision-relevant "
+            "follow-up questions rather than producing a broad checklist\n"
+            "• If enough red-flag evidence exists, set decision_state to final and provide a "
+            "clear final_verdict\n"
             f"\nInclude this disclaimer: {MEDICAL_DISCLAIMER}"
         )
     elif mode == CaseMode.DISASTER_RESPONSE:
@@ -96,6 +119,10 @@ STRICT OUTPUT RULES
             "• RED FLAGS: people trapped, access blocked, active fire, rising water, "
             "hazmat exposure, critical infrastructure failure → ESCALATE severity\n"
             "• Structured field report for incident command\n"
+            "• Ask only the most important follow-up questions needed for rescue routing, "
+            "dispatch, or public safety messaging\n"
+            "• If enough incident data exists for an operational conclusion, set decision_state "
+            "to final and provide a clear final_verdict\n"
             f"\nInclude this disclaimer: {DISASTER_DISCLAIMER}"
         )
     else:
@@ -122,6 +149,8 @@ For images: describe visible injuries, scene conditions, signage, and hazards.
 For audio: transcribe and extract critical facts.
 For documents/PDFs: parse incident reports, medical records, and official communications.
 Cross-reference all evidence sources against the text input.
+If the intake is sparse, use follow_up_questions to ask for the next best operator prompts.
+If previous_analysis_context is present, use it to continue the same case rather than restarting.
 
 EXPECTED JSON SCHEMA
 {schema}
@@ -131,6 +160,9 @@ RAW INPUT
 
 ARTIFACT CONTEXT
 {artifact_context}
+
+PREVIOUS ANALYSIS CONTEXT
+{previous_analysis_context}
 """.strip()
 
     return prompt_name, prompt

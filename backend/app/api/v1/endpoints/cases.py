@@ -11,8 +11,8 @@ from app.schemas.case import (
     CaseCreate,
     CaseDeleteResponse,
     CaseDetailResponse,
-    CaseUpdate,
     CaseSummaryResponse,
+    CaseUpdate,
     ExportJSONResponse,
 )
 from app.services.artifact_service import ArtifactService

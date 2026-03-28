@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Generator
 import os
+from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,12 +15,12 @@ os.environ["CLOUD_SQL_USE_CONNECTOR"] = "false"
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["GOOGLE_GENAI_API_KEY"] = ""
 os.environ["GEMINI_API_KEY"] = ""
+os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ALLOW_DEMO_FALLBACK"] = "true"
 
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
-
 
 SQLALCHEMY_DATABASE_URL = "sqlite://"
 

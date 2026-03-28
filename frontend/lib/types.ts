@@ -1,6 +1,7 @@
 export type CaseMode = "auto_detect" | "medical_triage" | "disaster_response";
 export type DetectedCaseType = "medical" | "disaster" | "mixed" | "unclear";
 export type UrgencyLevel = "low" | "moderate" | "high" | "critical";
+export type DecisionState = "needs_clarification" | "provisional" | "final";
 
 export type ObservedFact = {
   label: string;
@@ -54,16 +55,20 @@ export type NormalizedAnalysisOutput = {
   schema_version: string;
   mode_used: CaseMode;
   case_type: DetectedCaseType;
+  decision_state: DecisionState;
   urgency_level: UrgencyLevel;
   confidence: number;
   concise_summary: string;
   handoff_summary: string;
+  assistant_response: string;
+  final_verdict?: string | null;
   extracted_location?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
   observed_facts: ObservedFact[];
   inferred_risks: string[];
   missing_information: MissingInformationItem[];
+  follow_up_questions: string[];
   recommended_actions: RecommendedActionItem[];
   disclaimers: string[];
   structured: StructuredAnalysis;
@@ -137,6 +142,8 @@ export type LocationPulse = {
   label: string;
   severity: UrgencyLevel;
   note: string;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export type DashboardSummary = {
@@ -145,4 +152,3 @@ export type DashboardSummary = {
   queue: QueueCase[];
   incident_pulses: LocationPulse[];
 };
-

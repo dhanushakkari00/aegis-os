@@ -1,10 +1,8 @@
-"""Aegis OS FastAPI application entry point.
-
-Creates the ``FastAPI`` application, registers middleware, mounts routers,
-and configures startup hooks.
-"""
+"""Aegis OS FastAPI application entry point."""
 
 from __future__ import annotations
+
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,11 +22,20 @@ settings = get_settings()
 configure_logging(settings.log_level)
 logger = get_logger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Create database tables before serving requests."""
+    Base.metadata.create_all(bind=engine)
+    logger.info("Aegis OS backend started in %s mode", settings.app_env)
+    yield
+
 app = FastAPI(
     title=settings.app_name,
     description=APP_DESCRIPTION,
     version="0.1.0",
     openapi_tags=API_TAGS,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -53,13 +60,6 @@ app.add_middleware(
     allow_demo_fallback=settings.allow_demo_fallback,
 )
 app.add_middleware(RequestContextMiddleware)
-
-
-@app.on_event("startup")
-def startup() -> None:
-    """Create database tables and log the current environment."""
-    Base.metadata.create_all(bind=engine)
-    logger.info("Aegis OS backend started in %s mode", settings.app_env)
 
 
 @app.exception_handler(Exception)

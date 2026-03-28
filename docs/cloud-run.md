@@ -2,13 +2,12 @@
 
 ## Recommendation
 
-Deploy `frontend` and `backend` as two separate Cloud Run services.
+Two deployment shapes are now supported:
 
-Why:
+- Single combined Cloud Run service using the repo-root [Dockerfile](/Users/malavikapj/Documents/aegonis/Dockerfile) with same-origin `/api/v1`
+- Two separate Cloud Run services using [frontend/Dockerfile](/Users/malavikapj/Documents/aegonis/frontend/Dockerfile) and [backend/Dockerfile](/Users/malavikapj/Documents/aegonis/backend/Dockerfile)
 
-- The current frontend calls the backend from the browser using `NEXT_PUBLIC_API_BASE_URL`.
-- That means the backend needs its own public URL.
-- A single Cloud Run service only works cleanly if the frontend proxies all `/api/*` calls internally.
+Use the combined image when you need the fastest hackathon deployment. Use two services when you want independent scaling or separate release cadence.
 
 ## Important Constraint
 
@@ -40,7 +39,18 @@ From the repo root:
 
 ```bash
 gcloud builds submit ./backend --tag asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/aegis-os/backend:latest
-gcloud builds submit ./frontend --tag asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/aegis-os/frontend:latest
+```
+
+For the frontend Dockerfile path, pass a build arg so browser requests go to the backend service directly:
+
+```bash
+docker build \
+  -f frontend/Dockerfile \
+  --build-arg NEXT_PUBLIC_API_BASE_URL=https://BACKEND_URL/api/v1 \
+  -t asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/aegis-os/frontend:latest \
+  ./frontend
+
+docker push asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/aegis-os/frontend:latest
 ```
 
 ## Store Backend Secret
@@ -81,7 +91,7 @@ Notes:
 
 ## Deploy Frontend
 
-After backend deploy, get the backend URL and plug it into `NEXT_PUBLIC_API_BASE_URL`:
+After backend deploy, build the frontend image with `NEXT_PUBLIC_API_BASE_URL=https://BACKEND_URL/api/v1`, then deploy it:
 
 ```bash
 gcloud run deploy aegis-os-frontend \
@@ -90,8 +100,7 @@ gcloud run deploy aegis-os-frontend \
   --platform managed \
   --allow-unauthenticated \
   --cpu 1 \
-  --memory 1Gi \
-  --set-env-vars NEXT_PUBLIC_API_BASE_URL=https://BACKEND_URL/api/v1,NEXT_PUBLIC_APP_NAME='Aegis OS'
+  --memory 1Gi
 ```
 
 ## Update Backend CORS
@@ -117,16 +126,29 @@ That removes the SQLite persistence problem and is the correct upgrade path.
 
 ## Single-Service Option
 
-A single Cloud Run service is not the best fit for the current codebase.
+The current repo-root Dockerfile already supports the single-service path.
 
-To make one service work, you would need to:
+Behavior:
 
-1. Run the frontend as the ingress container.
-2. Run the backend as a sidecar container.
-3. Proxy all frontend `/api/*` traffic internally to the sidecar on `localhost`.
-4. Remove the browser-direct `NEXT_PUBLIC_API_BASE_URL` dependency.
+- Frontend serves the UI
+- nginx proxies `/api/*` to FastAPI inside the same container
+- Browser requests stay same-origin using the default `/api/v1`
 
-Without that refactor, use two services.
+Build and deploy:
+
+```bash
+gcloud builds submit . --tag asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/aegis-os/combined:latest
+
+gcloud run deploy aegis-os \
+  --image asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/aegis-os/combined:latest \
+  --region asia-south1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --cpu 1 \
+  --memory 1Gi \
+  --set-env-vars APP_ENV=production,DATABASE_URL=sqlite:///./aegis_os.db \
+  --set-secrets GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest
+```
 
 ## Useful Commands
 

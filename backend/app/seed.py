@@ -6,7 +6,6 @@ from app.db.session import SessionLocal, engine
 from app.schemas.enums import CaseMode
 from app.services.case_service import CaseService
 
-
 MEDICAL_DEMO = "58-year-old diabetic male with chest pain, sweating, and shortness of breath for 20 minutes."
 DISASTER_DEMO = "Flooding in Sector 9, 12 people trapped, one elderly injured, roads blocked, water above knee height."
 

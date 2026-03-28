@@ -91,7 +91,8 @@ class ArtifactService:
         artifact_type: str,
     ) -> Artifact:
         """Validate, store, and record an uploaded artifact."""
-        if file.content_type not in self.settings.allowed_upload_mime_types:
+        content_type = self._normalize_mime_type(file.content_type)
+        if content_type not in self.settings.allowed_upload_mime_types:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Unsupported file type.",
@@ -106,7 +107,6 @@ class ArtifactService:
             )
 
         safe_name = sanitize_filename(file.filename or "artifact")
-        content_type = file.content_type or "application/octet-stream"
 
         # Determine storage backend.
         local_path: str | None = None
@@ -137,6 +137,13 @@ class ArtifactService:
         db.commit()
         db.refresh(artifact)
         return artifact
+
+    @staticmethod
+    def _normalize_mime_type(content_type: str | None) -> str:
+        """Collapse MIME values such as ``audio/webm;codecs=opus`` to ``audio/webm``."""
+        if not content_type:
+            return "application/octet-stream"
+        return content_type.split(";", 1)[0].strip().lower()
 
     # ------------------------------------------------------------------
     # Local storage fallback

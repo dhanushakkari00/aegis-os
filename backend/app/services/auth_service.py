@@ -5,12 +5,13 @@ Provides user registration, login validation, and JWT token creation/verificatio
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import hmac
 import json
-import base64
+import secrets
 import time
-import uuid
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -20,12 +21,21 @@ from app.core.logging import get_logger
 from app.models.user import User
 
 logger = get_logger(__name__)
+PBKDF2_ITERATIONS = 310_000
+
+
+def _b64url_encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode().rstrip("=")
+
+
+def _b64url_decode(value: str) -> bytes:
+    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
 
 
 def _hash_password(password: str) -> str:
     """Hash a password using PBKDF2-HMAC-SHA256."""
-    salt = uuid.uuid4().hex
-    key = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100_000)
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), PBKDF2_ITERATIONS)
     return f"{salt}${key.hex()}"
 
 
@@ -33,7 +43,7 @@ def _verify_password(password: str, hashed: str) -> bool:
     """Verify a password against its stored hash."""
     try:
         salt, stored_key = hashed.split("$", 1)
-        key = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100_000)
+        key = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), PBKDF2_ITERATIONS)
         return hmac.compare_digest(key.hex(), stored_key)
     except (ValueError, AttributeError):
         return False
@@ -41,12 +51,23 @@ def _verify_password(password: str, hashed: str) -> bool:
 
 def _create_jwt(payload: dict[str, Any], secret: str, expires_hours: int = 72) -> str:
     """Create a simple JWT token (HS256)."""
-    header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).decode().rstrip("=")
-    payload["exp"] = int(time.time()) + expires_hours * 3600
-    payload["iat"] = int(time.time())
-    body = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    issued_at = int(time.time())
+    header = _b64url_encode(
+        json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":"), sort_keys=True).encode()
+    )
+    body = _b64url_encode(
+        json.dumps(
+            {
+                **payload,
+                "exp": issued_at + expires_hours * 3600,
+                "iat": issued_at,
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode()
+    )
     signature_input = f"{header}.{body}"
-    sig = hmac.new(secret.encode(), signature_input.encode(), hashlib.sha256).hexdigest()
+    sig = _b64url_encode(hmac.new(secret.encode(), signature_input.encode(), hashlib.sha256).digest())
     return f"{header}.{body}.{sig}"
 
 
@@ -57,16 +78,19 @@ def _decode_jwt(token: str, secret: str) -> dict[str, Any] | None:
         if len(parts) != 3:
             return None
         header_b, body_b, sig = parts
-        expected_sig = hmac.new(secret.encode(), f"{header_b}.{body_b}".encode(), hashlib.sha256).hexdigest()
+        header = json.loads(_b64url_decode(header_b))
+        if header.get("alg") != "HS256" or header.get("typ") != "JWT":
+            return None
+        expected_sig = _b64url_encode(
+            hmac.new(secret.encode(), f"{header_b}.{body_b}".encode(), hashlib.sha256).digest()
+        )
         if not hmac.compare_digest(sig, expected_sig):
             return None
-        # Pad base64
-        body_padded = body_b + "=" * (4 - len(body_b) % 4)
-        payload = json.loads(base64.urlsafe_b64decode(body_padded))
+        payload = json.loads(_b64url_decode(body_b))
         if payload.get("exp", 0) < time.time():
             return None
         return payload
-    except Exception:
+    except (ValueError, TypeError, json.JSONDecodeError, binascii.Error):
         return None
 
 

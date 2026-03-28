@@ -7,7 +7,10 @@
 # ── Stage 1: Build the Next.js frontend ──────
 FROM node:22-alpine AS frontend-build
 WORKDIR /app
-ENV NEXT_PUBLIC_API_BASE_URL=/api/v1
+ARG NEXT_PUBLIC_API_BASE_URL=/api/v1
+ARG INTERNAL_API_ORIGIN=http://127.0.0.1:8000
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV INTERNAL_API_ORIGIN=${INTERNAL_API_ORIGIN}
 ENV NEXT_PUBLIC_APP_NAME="Aegis OS"
 COPY frontend/package.json ./
 RUN npm install

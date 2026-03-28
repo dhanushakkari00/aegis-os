@@ -4,9 +4,16 @@ from collections import Counter
 
 from sqlalchemy.orm import Session
 
-from app.schemas.case import DashboardMetric, DashboardSummaryResponse, LocationPulse, QueueCase, SeverityBucket
+from app.schemas.case import (
+    DashboardMetric,
+    DashboardSummaryResponse,
+    LocationPulse,
+    QueueCase,
+    SeverityBucket,
+)
 from app.schemas.enums import UrgencyLevel
 from app.services.case_service import CaseService
+from app.services.location_resolver import resolve_case_coords, resolve_case_location
 
 
 class DashboardService:
@@ -43,18 +50,19 @@ class DashboardService:
 
         incident_pulses = []
         for case in cases[:6]:
-            location = "Unknown location"
             note = case.handoff_summary or case.raw_input[:120]
-            structured = case.structured_result_json or {}
-            structured_section = structured.get("structured") or {}
-            disaster_section = structured_section.get("disaster") or {}
-            disaster_location = (
-                disaster_section.get("location")
+            coords = resolve_case_coords(case)
+            location = resolve_case_location(case) or (
+                f"{coords[0]:.5f}, {coords[1]:.5f}" if coords else "Unknown location"
             )
-            if disaster_location:
-                location = disaster_location
             incident_pulses.append(
-                LocationPulse(label=location, severity=case.urgency_level, note=note[:120])
+                LocationPulse(
+                    label=location,
+                    severity=case.urgency_level,
+                    note=note[:120],
+                    lat=coords[0] if coords else None,
+                    lng=coords[1] if coords else None,
+                )
             )
 
         return DashboardSummaryResponse(
