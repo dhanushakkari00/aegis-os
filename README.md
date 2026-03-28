@@ -23,20 +23,17 @@ Aegis OS is a hackathon-ready emergency intelligence platform for medical triage
 ## Quick Start
 
 1. Copy `.env.example` to `.env` and set backend secrets.
-2. Start Postgres with `docker compose up postgres -d`.
-3. Start the backend:
+2. Start the backend:
 
 ```bash
 cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
-alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-For Google Cloud SQL, set `CLOUD_SQL_USE_CONNECTOR=true`, `CLOUD_SQL_CONNECTION_NAME`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` in `.env`. The backend can then connect through the Cloud SQL Python Connector without exposing secrets to the frontend.
-The backend reads the repository-root `.env`, so the same file works whether you run from the repo root or from `backend/`.
+The default local path uses SQLite and creates the tables automatically on startup. The backend reads the repository-root `.env`, so the same file works whether you run from the repo root or from `backend/`.
 
 4. Start the frontend:
 
@@ -53,7 +50,7 @@ npm run dev
 - Medical: `58-year-old diabetic male with chest pain, sweating, and shortness of breath for 20 minutes.`
 - Disaster: `Flooding in Sector 9, 12 people trapped, one elderly injured, roads blocked, water above knee height.`
 
-Seed helpers are available in the backend and surfaced in the UI as quick-start examples.
+Seed example text is surfaced in the UI as quick-start input, but the application always uses the persisted backend path for execution.
 
 ## Security Notes
 
