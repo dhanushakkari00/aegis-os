@@ -73,4 +73,5 @@ Seed example text is surfaced in the UI as quick-start input, but the applicatio
 - Frontend reads only the public API base URL from environment
 
 See [docs/architecture.md](/Users/malavikapj/Documents/aegonis/docs/architecture.md) for the system design overview.
+Cloud Run steps are in [docs/cloud-run.md](/Users/malavikapj/Documents/aegonis/docs/cloud-run.md).
 # aegis-os
