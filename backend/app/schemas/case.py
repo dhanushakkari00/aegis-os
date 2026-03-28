@@ -21,6 +21,21 @@ class CaseCreate(BaseModel):
         return normalized
 
 
+class CaseUpdate(BaseModel):
+    mode: CaseMode | None = None
+    raw_input: str | None = Field(default=None, min_length=10, max_length=8000)
+
+    @field_validator("raw_input")
+    @classmethod
+    def normalize_optional_input(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip()
+        if len(normalized) < 10:
+            raise ValueError("Case intake must contain at least 10 characters.")
+        return normalized
+
+
 class ArtifactResponse(BaseModel):
     id: str
     filename: str
@@ -29,6 +44,7 @@ class ArtifactResponse(BaseModel):
     artifact_type: str
     storage_provider: str
     storage_uri: str
+    local_path: str | None = None
     content_excerpt: str | None = None
     created_at: datetime
 
@@ -73,6 +89,11 @@ class AnalyzeCaseRequest(BaseModel):
     mode_override: CaseMode | None = None
 
 
+class CaseDeleteResponse(BaseModel):
+    id: str
+    deleted: bool
+
+
 class ExportJSONResponse(BaseModel):
     case_id: str
     payload: NormalizedAnalysisOutput | None
@@ -109,4 +130,3 @@ class DashboardSummaryResponse(BaseModel):
     severity_distribution: list[SeverityBucket]
     queue: list[QueueCase]
     incident_pulses: list[LocationPulse]
-

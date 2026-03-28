@@ -9,7 +9,9 @@ from app.db.session import get_db
 from app.schemas.case import (
     AnalyzeCaseRequest,
     CaseCreate,
+    CaseDeleteResponse,
     CaseDetailResponse,
+    CaseUpdate,
     CaseSummaryResponse,
     ExportJSONResponse,
 )
@@ -53,6 +55,25 @@ def get_case(case_id: str, db: Session = Depends(get_db), service: CaseService =
     return CaseDetailResponse.model_validate(_serialize_case(case))
 
 
+@router.patch("/{case_id}", response_model=CaseDetailResponse)
+def update_case(
+    case_id: str,
+    payload: CaseUpdate,
+    db: Session = Depends(get_db),
+    service: CaseService = Depends(get_case_service),
+) -> CaseDetailResponse:
+    try:
+        case = service.update_case(
+            db,
+            case_id,
+            mode=payload.mode,
+            raw_input=payload.raw_input,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return CaseDetailResponse.model_validate(_serialize_case(case))
+
+
 @router.post("/{case_id}/upload", response_model=CaseDetailResponse)
 async def upload_artifact(
     case_id: str,
@@ -68,6 +89,28 @@ async def upload_artifact(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     await artifact_service.upload(db=db, case=case, file=file, artifact_type=artifact_type)
+    refreshed = case_service.get_case(db, case_id)
+    return CaseDetailResponse.model_validate(_serialize_case(refreshed))
+
+
+@router.delete("/{case_id}/artifacts/{artifact_id}", response_model=CaseDetailResponse)
+def delete_artifact(
+    case_id: str,
+    artifact_id: str,
+    db: Session = Depends(get_db),
+    case_service: CaseService = Depends(get_case_service),
+    artifact_service: ArtifactService = Depends(get_artifact_service),
+) -> CaseDetailResponse:
+    try:
+        case = case_service.get_case(db, case_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    artifact = next((item for item in case.artifacts if item.id == artifact_id), None)
+    if artifact is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found.")
+
+    artifact_service.delete(db=db, artifact=artifact)
     refreshed = case_service.get_case(db, case_id)
     return CaseDetailResponse.model_validate(_serialize_case(refreshed))
 
@@ -114,6 +157,19 @@ def export_handoff(
     return export_service.export_handoff(case)
 
 
+@router.delete("/{case_id}", response_model=CaseDeleteResponse)
+def delete_case(
+    case_id: str,
+    db: Session = Depends(get_db),
+    service: CaseService = Depends(get_case_service),
+) -> CaseDeleteResponse:
+    try:
+        service.delete_case(db, case_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return CaseDeleteResponse(id=case_id, deleted=True)
+
+
 def _serialize_case(case) -> dict:
     structured = case.structured_result_json
     recommended_actions = structured.get("recommended_actions", []) if structured else []
@@ -132,4 +188,3 @@ def _serialize_case(case) -> dict:
         "analysis_runs": case.analysis_runs,
         "recommended_actions": recommended_actions,
     }
-

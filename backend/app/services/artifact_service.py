@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
-from google.cloud import storage
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -32,15 +31,9 @@ class ArtifactService:
             )
 
         safe_name = sanitize_filename(file.filename or "artifact")
+        local_path = self._store_locally(case.id, safe_name, contents)
         storage_provider = "local"
-        storage_uri = self._store_locally(case.id, safe_name, contents)
-
-        if self.settings.gcs_bucket_name:
-            try:
-                storage_uri = self._store_in_gcs(case.id, safe_name, contents, file.content_type or "application/octet-stream")
-                storage_provider = "gcs"
-            except Exception:
-                storage_provider = "local"
+        storage_uri = local_path
 
         excerpt = None
         if file.content_type == "text/plain":
@@ -51,9 +44,10 @@ class ArtifactService:
             filename=safe_name,
             mime_type=file.content_type or "application/octet-stream",
             size_bytes=len(contents),
-            artifact_type=artifact_type or "attachment",
+            artifact_type=artifact_type or self._infer_artifact_type(file.content_type or ""),
             storage_provider=storage_provider,
             storage_uri=storage_uri,
+            local_path=local_path,
             content_excerpt=excerpt,
         )
         db.add(artifact)
@@ -68,10 +62,21 @@ class ArtifactService:
         destination.write_bytes(contents)
         return str(destination)
 
-    def _store_in_gcs(self, case_id: str, filename: str, contents: bytes, content_type: str) -> str:
-        client = storage.Client(project=self.settings.google_cloud_project or None)
-        bucket = client.bucket(self.settings.gcs_bucket_name)
-        blob = bucket.blob(f"cases/{case_id}/{filename}")
-        blob.upload_from_string(contents, content_type=content_type)
-        return f"gs://{bucket.name}/{blob.name}"
+    def _infer_artifact_type(self, mime_type: str) -> str:
+        if mime_type.startswith("image/"):
+            return "image"
+        if mime_type.startswith("audio/"):
+            return "audio"
+        if mime_type == "application/pdf":
+            return "document"
+        if mime_type.startswith("text/"):
+            return "text"
+        return "attachment"
 
+    def delete(self, *, db: Session, artifact: Artifact) -> None:
+        if artifact.local_path:
+            path = Path(artifact.local_path)
+            if path.exists():
+                path.unlink()
+        db.delete(artifact)
+        db.commit()

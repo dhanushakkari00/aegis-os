@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.ai.types import ArtifactInput
 from app.ai.orchestrator import AIOrchestrator, serialize_analysis_output
 from app.core.config import Settings
 from app.models.analysis_run import AnalysisRun
@@ -54,16 +55,39 @@ class CaseService:
         )
         return list(db.scalars(statement).unique())
 
+    def update_case(self, db: Session, case_id: str, *, mode: CaseMode | None, raw_input: str | None) -> Case:
+        case = self.get_case(db, case_id)
+        if mode is not None:
+            case.mode = mode.value
+        if raw_input is not None:
+            case.raw_input = raw_input
+        db.commit()
+        return self.get_case(db, case_id)
+
+    def delete_case(self, db: Session, case_id: str) -> None:
+        case = self.get_case(db, case_id)
+        db.delete(case)
+        db.commit()
+
     def analyze_case(self, db: Session, case_id: str, mode_override: CaseMode | None = None) -> Case:
         case = self.get_case(db, case_id)
         mode = mode_override or CaseMode(case.mode)
 
         artifact_lines = []
+        artifact_inputs: list[ArtifactInput] = []
         for artifact in case.artifacts:
             summary = f"{artifact.filename} ({artifact.mime_type}, {artifact.size_bytes} bytes)"
             if artifact.content_excerpt:
                 summary += f" excerpt={artifact.content_excerpt[:280]}"
             artifact_lines.append(summary)
+            artifact_inputs.append(
+                ArtifactInput(
+                    filename=artifact.filename,
+                    mime_type=artifact.mime_type,
+                    local_path=artifact.local_path,
+                    content_excerpt=artifact.content_excerpt,
+                )
+            )
         artifact_context = "\n".join(artifact_lines) if artifact_lines else "No uploaded artifacts."
 
         try:
@@ -71,6 +95,7 @@ class CaseService:
                 mode=mode,
                 raw_input=case.raw_input,
                 artifact_context=artifact_context,
+                artifacts=artifact_inputs,
             )
         except Exception as exc:
             db.add(

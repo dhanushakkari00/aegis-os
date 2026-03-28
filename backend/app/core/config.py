@@ -24,9 +24,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     frontend_origin: str = "http://localhost:3000"
 
-    database_url: str = Field(
-        default="postgresql+psycopg://postgres:postgres@localhost:5432/aegis_os"
-    )
+    database_url: str = Field(default="sqlite:///./aegis_os.db")
     postgres_server: str = "localhost"
     postgres_port: int = 5432
     postgres_db: str = "aegis_os"
@@ -54,6 +52,12 @@ class Settings(BaseSettings):
             "image/png",
             "image/webp",
             "text/plain",
+            "audio/mpeg",
+            "audio/wav",
+            "audio/x-wav",
+            "audio/mp4",
+            "audio/webm",
+            "audio/ogg",
         ]
     )
 

@@ -55,6 +55,7 @@ def upgrade() -> None:
         sa.Column("artifact_type", sa.String(length=64), nullable=False),
         sa.Column("storage_provider", sa.String(length=64), nullable=False),
         sa.Column("storage_uri", sa.String(length=1024), nullable=False),
+        sa.Column("local_path", sa.String(length=1024), nullable=True),
         sa.Column("content_excerpt", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["case_id"], ["cases.id"], ondelete="CASCADE"),
@@ -83,4 +84,3 @@ def downgrade() -> None:
     op.drop_table("analysis_runs")
     op.drop_index("ix_cases_created_at", table_name="cases")
     op.drop_table("cases")
-

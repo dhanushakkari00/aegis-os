@@ -20,10 +20,10 @@ class Artifact(Base):
     artifact_type: Mapped[str] = mapped_column(String(64), nullable=False, default="attachment")
     storage_provider: Mapped[str] = mapped_column(String(64), nullable=False)
     storage_uri: Mapped[str] = mapped_column(String(1024), nullable=False)
+    local_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     content_excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
 
     case = relationship("Case", back_populates="artifacts")
-

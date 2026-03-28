@@ -14,6 +14,7 @@ def build_system_instruction() -> str:
         "Return a single JSON object that matches the provided schema exactly. "
         "Never output markdown. Never output prose outside the JSON object. "
         "Never invent facts. Use only information grounded in the input or artifact context. "
+        "Use any attached documents, images, or audio as primary evidence when they contain relevant facts. "
         "If a detail is missing, leave nullable fields null, use empty arrays where appropriate, "
         "and place the gap in missing_information. "
         "Separate observed_facts from inferred_risks. "
@@ -78,6 +79,10 @@ MODE
 
 MODE INSTRUCTIONS
 {mode_specific}
+
+FILE HANDLING
+Use attached audio, image, and document files as evidence. Extract usable facts from them, but do not invent
+transcripts, OCR text, or scene details when they are not actually inferable.
 
 EXPECTED JSON SCHEMA
 {schema}

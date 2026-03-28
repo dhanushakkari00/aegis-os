@@ -37,7 +37,13 @@ def create_sqlalchemy_engine() -> Engine:
             pool_pre_ping=True,
         )
 
-    return create_engine(settings.database_url, future=True, pool_pre_ping=True)
+    connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+    return create_engine(
+        settings.database_url,
+        future=True,
+        pool_pre_ping=True,
+        connect_args=connect_args,
+    )
 
 
 engine = create_sqlalchemy_engine()

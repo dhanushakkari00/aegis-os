@@ -10,6 +10,7 @@ from app.ai.prompt_builder import (
     build_correction_prompt,
     build_system_instruction,
 )
+from app.ai.types import ArtifactInput
 from app.core.constants import DISASTER_DISCLAIMER, MEDICAL_DISCLAIMER
 from app.core.config import Settings
 from app.schemas.analysis import (
@@ -29,7 +30,14 @@ class AIOrchestrator:
         self.settings = settings
         self.client = GeminiClient(settings)
 
-    def analyze(self, *, mode: CaseMode, raw_input: str, artifact_context: str) -> tuple[str, int, dict, NormalizedAnalysisOutput]:
+    def analyze(
+        self,
+        *,
+        mode: CaseMode,
+        raw_input: str,
+        artifact_context: str,
+        artifacts: list[ArtifactInput],
+    ) -> tuple[str, int, dict, NormalizedAnalysisOutput]:
         prompt_name, prompt = build_analysis_prompt(
             mode=mode,
             raw_input=raw_input,
@@ -48,6 +56,7 @@ class AIOrchestrator:
         response = self.client.generate_json(
             prompt=prompt,
             system_instruction=system_instruction,
+            artifacts=artifacts,
         )
         try:
             output = parse_analysis_output(response.text)
@@ -61,6 +70,7 @@ class AIOrchestrator:
             correction_response = self.client.generate_json(
                 prompt=correction_prompt,
                 system_instruction=system_instruction,
+                artifacts=artifacts,
             )
             output = parse_analysis_output(correction_response.text)
             latency_ms = int((perf_counter() - started) * 1000)
