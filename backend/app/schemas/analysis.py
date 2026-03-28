@@ -61,6 +61,12 @@ class NormalizedAnalysisOutput(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     concise_summary: str
     handoff_summary: str
+    extracted_location: str | None = Field(
+        default=None,
+        description="Best available location string for geocoding (address, landmark, or area name).",
+    )
+    location_lat: float | None = Field(default=None, description="Latitude if explicitly provided.")
+    location_lng: float | None = Field(default=None, description="Longitude if explicitly provided.")
     observed_facts: list[ObservedFact] = Field(default_factory=list)
     inferred_risks: list[str] = Field(default_factory=list)
     missing_information: list[MissingInformationItem] = Field(default_factory=list)

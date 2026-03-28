@@ -42,6 +42,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("GOOGLE_GENAI_API_KEY", "GEMINI_API_KEY"),
     )
     gcs_bucket_name: str | None = None
+    google_maps_api_key: str | None = None
     gcs_signed_url_ttl_seconds: int = 900
 
     max_upload_size_mb: int = 20

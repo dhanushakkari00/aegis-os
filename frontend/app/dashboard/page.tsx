@@ -25,7 +25,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" aria-live="polite">
       <section className="rounded-[32px] border border-white/10 bg-white/5 p-6">
         <p className="text-xs uppercase tracking-[0.24em] text-cyan">Operations dashboard</p>
         <h2 className="mt-3 font-display text-4xl font-semibold text-white">
@@ -43,7 +43,7 @@ export default function DashboardPage() {
       </section>
 
       {error ? (
-        <Card className="border-critical/30 bg-critical/10 p-6">
+        <Card className="border-critical/30 bg-critical/10 p-6" role="alert">
           <p className="font-medium text-white">Dashboard unavailable</p>
           <p className="mt-2 text-sm text-rose-100">{error}</p>
         </Card>

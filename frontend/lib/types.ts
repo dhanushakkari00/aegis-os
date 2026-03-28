@@ -58,6 +58,9 @@ export type NormalizedAnalysisOutput = {
   confidence: number;
   concise_summary: string;
   handoff_summary: string;
+  extracted_location?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
   observed_facts: ObservedFact[];
   inferred_risks: string[];
   missing_information: MissingInformationItem[];

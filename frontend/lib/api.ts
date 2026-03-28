@@ -9,6 +9,52 @@ import type {
 
 const API_BASE = "/api/v1";
 
+type ValidationDetail = {
+  loc?: Array<string | number>;
+  msg?: string;
+  type?: string;
+};
+
+function formatValidationDetail(detail: ValidationDetail) {
+  const location = Array.isArray(detail.loc) && detail.loc.length > 0
+    ? `${detail.loc.join(".")}: `
+    : "";
+  return `${location}${detail.msg ?? detail.type ?? "Validation error"}`;
+}
+
+function normalizeErrorDetail(detail: unknown): string | null {
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (item && typeof item === "object") {
+          return formatValidationDetail(item as ValidationDetail);
+        }
+        return typeof item === "string" ? item : null;
+      })
+      .filter((item): item is string => Boolean(item));
+
+    return messages.length > 0 ? messages.join(" | ") : null;
+  }
+
+  if (detail && typeof detail === "object") {
+    const maybeMessage = "message" in detail ? detail.message : null;
+    if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+      return maybeMessage;
+    }
+    return JSON.stringify(detail);
+  }
+
+  if (typeof detail === "number" || typeof detail === "boolean") {
+    return String(detail);
+  }
+
+  return null;
+}
+
 function toJsonHeaders() {
   return {
     Accept: "application/json",
@@ -29,10 +75,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     let detail = `Request failed: ${response.status}`;
     try {
-      const payload = (await response.json()) as { detail?: string };
-      if (payload.detail) {
-        detail = payload.detail;
-      }
+      const payload = (await response.json()) as { detail?: unknown; message?: unknown };
+      detail = normalizeErrorDetail(payload.detail) ?? normalizeErrorDetail(payload.message) ?? detail;
     } catch {
       // Keep the default message when the response body is not JSON.
     }
@@ -84,4 +128,29 @@ export async function listCases() {
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
   return request<DashboardSummary>("/dashboard/summary");
+}
+
+export type NearbyHospital = {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  place_id: string;
+  rating: number | null;
+  open_now: boolean | null;
+};
+
+export type NearbySearchResult = {
+  query_location: string;
+  lat: number | null;
+  lng: number | null;
+  hospitals: NearbyHospital[];
+};
+
+export async function getNearbyHospitals(caseId: string) {
+  return request<NearbySearchResult>(`/cases/${caseId}/nearby-hospitals`);
+}
+
+export async function searchNearby(location: string) {
+  return request<NearbySearchResult>(`/nearby?location=${encodeURIComponent(location)}`);
 }

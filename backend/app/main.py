@@ -1,3 +1,9 @@
+"""Aegis OS FastAPI application entry point.
+
+Creates the ``FastAPI`` application, registers middleware, mounts routers,
+and configures startup hooks.
+"""
+
 from __future__ import annotations
 
 from fastapi import FastAPI, Request, status
@@ -9,9 +15,10 @@ from app.api.v1.api import api_router
 from app.core.config import get_settings
 from app.core.constants import API_TAGS, APP_DESCRIPTION
 from app.core.logging import configure_logging, get_logger
-from app.core.middleware import GeminiGuardMiddleware, RequestContextMiddleware
+from app.core.middleware import GeminiGuardMiddleware, RateLimitMiddleware, RequestContextMiddleware
 from app.db.base import Base
 from app.db.session import engine
+from app.models.user import User  # noqa: F401 — ensures users table is created
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -28,12 +35,17 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=["localhost", "127.0.0.1", "testserver", "*.vercel.app", "*.run.app"],
+)
+app.add_middleware(
+    RateLimitMiddleware,
+    max_requests=15,
+    window_seconds=60,
 )
 app.add_middleware(
     GeminiGuardMiddleware,
@@ -45,16 +57,18 @@ app.add_middleware(RequestContextMiddleware)
 
 @app.on_event("startup")
 def startup() -> None:
+    """Create database tables and log the current environment."""
     Base.metadata.create_all(bind=engine)
     logger.info("Aegis OS backend started in %s mode", settings.app_env)
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
+    """Catch-all handler that avoids leaking internal details to the client."""
     logger.exception("Unhandled backend error: %s", exc.__class__.__name__)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "An internal error occurred."},
+        content={"detail": "An internal error occurred. Please try again."},
     )
 
 

@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield, Sparkles } from "lucide-react";
+import { Shield } from "lucide-react";
 
 import { AccessibilityToggle } from "@/components/accessibility-toggle";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -27,15 +26,9 @@ export function CommandHeader() {
               <Shield className="h-6 w-6 text-cyan" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-display text-xl font-semibold text-white">Aegis OS</h1>
-                <Badge className="border-cyan/20 bg-cyan/10 text-cyan">
-                  <Sparkles className="h-3 w-3" />
-                  Command Center
-                </Badge>
-              </div>
+              <h1 className="font-display text-xl font-semibold text-white">Aegis OS</h1>
               <p className="text-sm text-slate-300">
-                Emergency intelligence for medical triage and disaster response
+                Emergency intelligence platform
               </p>
             </div>
           </div>
@@ -68,4 +61,3 @@ export function CommandHeader() {
     </header>
   );
 }
-

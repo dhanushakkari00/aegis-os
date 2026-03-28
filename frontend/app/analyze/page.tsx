@@ -79,7 +79,7 @@ export default function AnalyzePage() {
   }, [caseId]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" aria-live="polite" aria-busy={loading}>
       <section className="flex flex-col gap-4 rounded-[32px] border border-white/10 bg-white/5 p-6 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-cyan">Analysis board</p>
@@ -108,59 +108,62 @@ export default function AnalyzePage() {
       <AnalysisPipeline activeStep={step} loading={loading} />
 
       {error ? (
-        <Card className="border-critical/30 bg-critical/10 p-6">
+        <Card className="border-critical/30 bg-critical/10 p-6" role="alert">
           <p className="font-medium text-white">Analysis could not complete</p>
           <p className="mt-2 text-sm text-rose-100">{error}</p>
         </Card>
       ) : null}
 
       {loading && !caseData ? (
-        <Card className="flex items-center gap-4 p-6">
-          <LoaderCircle className="h-5 w-5 animate-spin text-cyan" />
+        <Card className="flex items-center gap-4 p-6" role="status" aria-label="Analysis in progress">
+          <LoaderCircle className="h-5 w-5 animate-spin text-cyan" aria-hidden="true" />
           <p className="text-slate-200">Running analysis and building the handoff package.</p>
         </Card>
       ) : null}
 
       {caseData ? (
         <>
+          <section className="grid gap-6 xl:grid-cols-2" aria-label="Urgency and confidence">
+            <UrgencyBadge urgency={caseData.urgency_level} />
+            <ConfidenceMeter confidence={caseData.confidence} />
+          </section>
+
+          <MissingInfoPanel
+            items={caseData.structured_result_json?.missing_information ?? []}
+          />
+
           <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <HandoffSummaryCard
               summary={caseData.handoff_summary}
               disclaimers={caseData.structured_result_json?.disclaimers}
             />
-            <div className="space-y-6">
-              <ConfidenceMeter confidence={caseData.confidence} />
-              <Card>
-                <CardHeader>
-                  <div>
-                    <CardTitle>Case signal</CardTitle>
-                    <CardDescription>
-                      Created {formatTimestamp(caseData.created_at)} and last updated{" "}
-                      {formatTimestamp(caseData.updated_at)}.
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-                <div className="space-y-3 text-sm text-slate-300">
-                  <p>
-                    <span className="font-medium text-white">Mode:</span>{" "}
-                    {caseData.mode.replaceAll("_", " ")}
-                  </p>
-                  <p>
-                    <span className="font-medium text-white">Detected type:</span>{" "}
-                    {caseData.detected_case_type}
-                  </p>
-                  <p className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    {caseData.structured_result_json?.concise_summary}
-                  </p>
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Case signal</CardTitle>
+                  <CardDescription>
+                    Created {formatTimestamp(caseData.created_at)} and last updated{" "}
+                    {formatTimestamp(caseData.updated_at)}.
+                  </CardDescription>
                 </div>
-              </Card>
-            </div>
+              </CardHeader>
+              <div className="space-y-3 text-sm text-slate-300">
+                <p>
+                  <span className="font-medium text-white">Mode:</span>{" "}
+                  {caseData.mode.replaceAll("_", " ")}
+                </p>
+                <p>
+                  <span className="font-medium text-white">Detected type:</span>{" "}
+                  {caseData.detected_case_type}
+                </p>
+                <p className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  {caseData.structured_result_json?.concise_summary}
+                </p>
+              </div>
+            </Card>
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-            <MissingInfoPanel
-              items={caseData.structured_result_json?.missing_information ?? []}
-            />
             <Card>
               <CardHeader>
                 <div>

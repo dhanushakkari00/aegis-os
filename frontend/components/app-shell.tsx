@@ -5,7 +5,14 @@ import { CommandHeader } from "@/components/command-header";
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-ink text-slate-100">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      {/* Skip-to-content for keyboard / screen-reader users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-cyan focus:px-4 focus:py-2 focus:text-ink focus:outline-none"
+      >
+        Skip to content
+      </a>
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute left-[-10%] top-[-15%] h-[420px] w-[420px] rounded-full bg-cyan/10 blur-3xl" />
         <div className="absolute bottom-[-10%] right-[-5%] h-[380px] w-[380px] rounded-full bg-emerald-400/10 blur-3xl" />
         <div className="absolute inset-0 bg-command-grid bg-[size:70px_70px] opacity-[0.08]" />
@@ -13,11 +20,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <div className="relative z-10">
         <CommandHeader />
-        <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 lg:px-8">
+        <main
+          id="main-content"
+          className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 lg:px-8"
+        >
           {children}
         </main>
       </div>
     </div>
   );
 }
-

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Float, Index, JSON, String, Text
+from sqlalchemy import Float, ForeignKey, Index, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -20,6 +20,11 @@ class Case(Base, TimestampMixin):
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     structured_result_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     handoff_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=True, index=True
+    )
+
+    owner = relationship("User", back_populates="cases")
 
     artifacts = relationship("Artifact", back_populates="case", cascade="all, delete-orphan")
     analysis_runs = relationship("AnalysisRun", back_populates="case", cascade="all, delete-orphan")

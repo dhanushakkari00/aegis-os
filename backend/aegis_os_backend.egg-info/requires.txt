@@ -1,5 +1,6 @@
 alembic<2.0,>=1.16
 fastapi<0.136,>=0.135
+google-cloud-logging<4.0,>=3.11
 google-cloud-storage<4.0,>=3.1
 cloud-sql-python-connector[psycopg]<2.0,>=1.18
 google-genai<2.0,>=1.10

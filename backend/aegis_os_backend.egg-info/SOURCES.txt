@@ -14,6 +14,7 @@ app/ai/gemini_client.py
 app/ai/orchestrator.py
 app/ai/output_parser.py
 app/ai/prompt_builder.py
+app/ai/types.py
 app/api/__init__.py
 app/api/v1/__init__.py
 app/api/v1/api.py
@@ -46,4 +47,7 @@ app/services/dashboard_service.py
 app/services/export_service.py
 app/tests/conftest.py
 app/tests/test_cases_api.py
+app/tests/test_dashboard.py
+app/tests/test_health.py
 app/tests/test_output_parser.py
+app/tests/test_security.py
