@@ -1,0 +1,17 @@
+{
+  "name": "aegis-os",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "test:frontend": "npm --prefix frontend run test",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload",
+    "test:backend": "cd backend && pytest",
+    "seed:backend": "cd backend && python -m app.seed"
+  }
+}
+
