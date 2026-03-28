@@ -23,9 +23,10 @@ Aegis OS is a hackathon-ready emergency intelligence platform for medical triage
 ## Quick Start
 
 1. Copy `.env.example` to `.env` and set backend secrets.
-2. Start the backend with SQLite:
+2. Start the backend with Postgres:
 
 ```bash
+docker compose up postgres -d
 cd backend
 python -m venv .venv
 source .venv/bin/activate
@@ -33,7 +34,7 @@ pip install -e .[dev]
 uvicorn app.main:app --reload
 ```
 
-The default local path uses SQLite and creates the tables automatically on startup. The backend reads the repository-root `.env`, so the same file works whether you run from the repo root or from `backend/`.
+The default local path is Postgres-first. The backend reads the repository-root `.env`, so the same file works whether you run from the repo root or from `backend/`. Tables are created automatically on startup.
 
 3. Start the frontend:
 
@@ -47,7 +48,7 @@ npm run dev
 
 ## Docker Compose Postgres
 
-Use Docker Compose when you want the repo to exercise Postgres instead of SQLite:
+Use Docker Compose when you want the full local stack:
 
 ```bash
 docker compose up --build

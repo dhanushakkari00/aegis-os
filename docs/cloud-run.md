@@ -11,9 +11,7 @@ Use the combined image when you need the fastest hackathon deployment. Use two s
 
 ## Important Constraint
 
-The backend currently defaults to SQLite. On Cloud Run, the writable filesystem is ephemeral and does not persist across instance restarts.
-
-Use SQLite on Cloud Run only for a throwaway demo. For any persistent deployment, switch the backend to Cloud SQL Postgres.
+The backend is now Postgres-first. On Cloud Run, use Cloud SQL Postgres for persistence and avoid filesystem-backed databases entirely.
 
 ## Minimal Two-Service Setup
 
@@ -67,7 +65,7 @@ printf '%s' 'YOUR_GEMINI_API_KEY' | gcloud secrets versions add aegis-gemini-api
 
 ## Deploy Backend
 
-Demo-only SQLite deployment:
+Cloud SQL-backed deployment:
 
 ```bash
 gcloud run deploy aegis-os-backend \
@@ -77,17 +75,9 @@ gcloud run deploy aegis-os-backend \
   --allow-unauthenticated \
   --cpu 1 \
   --memory 1Gi \
-  --min-instances 1 \
-  --max-instances 1 \
-  --concurrency 1 \
-  --set-env-vars APP_ENV=production,FRONTEND_ORIGIN=https://FRONTEND_URL_PLACEHOLDER,GOOGLE_GENAI_MODEL=gemini-2.5-flash,DATABASE_URL=sqlite:///./aegis_os.db \
+  --set-env-vars APP_ENV=production,FRONTEND_ORIGIN=https://FRONTEND_URL_PLACEHOLDER,GOOGLE_GENAI_MODEL=gemini-2.5-flash,DATABASE_URL=postgresql+psycopg://DB_USER:DB_PASSWORD@DB_HOST:5432/DB_NAME \
   --set-secrets GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest
 ```
-
-Notes:
-
-- `min-instances=1`, `max-instances=1`, and `concurrency=1` reduce SQLite corruption risk.
-- Data still disappears on restart or revision change.
 
 ## Deploy Frontend
 
@@ -122,7 +112,7 @@ Use two Cloud Run services plus Cloud SQL Postgres:
 - `Cloud SQL`: Postgres for persistence
 - `Secret Manager`: Gemini key
 
-That removes the SQLite persistence problem and is the correct upgrade path.
+That is the primary supported deployment path.
 
 ## Single-Service Option
 
@@ -146,7 +136,7 @@ gcloud run deploy aegis-os \
   --allow-unauthenticated \
   --cpu 1 \
   --memory 1Gi \
-  --set-env-vars APP_ENV=production,DATABASE_URL=sqlite:///./aegis_os.db \
+  --set-env-vars APP_ENV=production,DATABASE_URL=postgresql+psycopg://DB_USER:DB_PASSWORD@DB_HOST:5432/DB_NAME \
   --set-secrets GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest
 ```
 

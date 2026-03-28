@@ -4,6 +4,7 @@ import secrets
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote_plus
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -26,12 +27,12 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:3000"
     secret_key: str | None = None
 
-    database_url: str = Field(default="sqlite:///./aegis_os.db")
+    database_url: str | None = None
     postgres_server: str = "localhost"
     postgres_port: int = 5432
     postgres_db: str = "aegis_os"
     postgres_user: str = "postgres"
-    postgres_password: str = ""
+    postgres_password: str = "postgres"
     cloud_sql_connection_name: str | None = None
     cloud_sql_use_connector: bool = False
     allow_demo_fallback: bool = False
@@ -89,6 +90,13 @@ class Settings(BaseSettings):
             raise ValueError("MAX_UPLOAD_SIZE_MB must be positive.")
         if self.cloud_sql_use_connector and not self.cloud_sql_connection_name:
             raise ValueError("CLOUD_SQL_CONNECTION_NAME is required when connector mode is enabled.")
+        if not self.database_url and not self.cloud_sql_use_connector:
+            user = quote_plus(self.postgres_user)
+            password = quote_plus(self.postgres_password)
+            self.database_url = (
+                f"postgresql+psycopg://{user}:{password}@"
+                f"{self.postgres_server}:{self.postgres_port}/{self.postgres_db}"
+            )
         if self.app_env.lower() == "production" and not self.secret_key:
             raise ValueError("SECRET_KEY must be set explicitly in production.")
         if not self.secret_key:

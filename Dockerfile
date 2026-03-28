@@ -31,9 +31,10 @@ RUN apt-get update && \
 WORKDIR /app/backend
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-COPY backend/ /app/backend/
+COPY backend/requirements.txt /app/backend/
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -e .[dev]
+    pip install --no-cache-dir -r requirements.txt
+COPY backend/ /app/backend/
 
 # ── Frontend setup ───────────────────────────
 WORKDIR /app/frontend
