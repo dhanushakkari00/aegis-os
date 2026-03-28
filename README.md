@@ -16,6 +16,7 @@ Aegis OS is a hackathon-ready emergency intelligence platform for medical triage
 - Case modes: Auto Detect, Medical Triage, Disaster Response
 - AI output normalized to validated JSON with retry-on-parse-failure handling
 - Secure backend-only Gemini access
+- Optional Gmail handoff delivery for stored case contact emails
 - Google Cloud Storage upload scaffold
 - Exportable JSON and human-readable handoff summaries
 - Accessible dashboard, case queue, severity charts, and live analysis pipeline
@@ -70,6 +71,7 @@ These sample texts are useful for verification and backend seeding, but the app 
 ## Security Notes
 
 - Gemini credentials remain server-side only
+- Gmail OAuth credentials remain server-side only
 - `SECRET_KEY` is required explicitly in production for auth token signing
 - Keep `.env` local only. Do not commit it to GitHub. Use Cloud Run env vars and Secret Manager for deployed services.
 - File MIME and size validation are enforced in the backend

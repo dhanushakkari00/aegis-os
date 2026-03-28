@@ -92,7 +92,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.text()) as T;
 }
 
-export async function createCase(payload: { mode: CaseMode; raw_input: string }) {
+export async function createCase(payload: {
+  mode: CaseMode;
+  raw_input: string;
+  contact_email?: string | null;
+}) {
   return request<CaseDetail>("/cases", {
     method: "POST",
     headers: toJsonHeaders(),
@@ -123,11 +127,22 @@ export async function getCase(caseId: string) {
   return request<CaseDetail>(`/cases/${caseId}`);
 }
 
-export async function updateCase(caseId: string, payload: Partial<Pick<CaseDetail, "raw_input">> & { mode?: CaseMode }) {
+export async function updateCase(
+  caseId: string,
+  payload: Partial<Pick<CaseDetail, "raw_input" | "contact_email">> & { mode?: CaseMode }
+) {
   return request<CaseDetail>(`/cases/${caseId}`, {
     method: "PATCH",
     headers: toJsonHeaders(),
     body: JSON.stringify(payload)
+  });
+}
+
+export async function sendCaseEmailNotification(caseId: string, recipientEmail?: string | null) {
+  return request<CaseDetail>(`/cases/${caseId}/notify/email`, {
+    method: "POST",
+    headers: toJsonHeaders(),
+    body: JSON.stringify(recipientEmail ? { recipient_email: recipientEmail } : {})
   });
 }
 

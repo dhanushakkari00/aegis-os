@@ -6,18 +6,16 @@ No OTP verification — simple email/password authentication with JWT tokens.
 
 from __future__ import annotations
 
-import re
-
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.validation import normalize_email
 from app.db.session import get_db
 from app.services.auth_service import AuthService
 
 router = APIRouter()
-EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class SignupRequest(BaseModel):
@@ -30,8 +28,8 @@ class SignupRequest(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: str) -> str:
-        normalized = value.strip().lower()
-        if not EMAIL_PATTERN.fullmatch(normalized):
+        normalized = normalize_email(value)
+        if normalized is None:
             raise ValueError("Invalid email address.")
         return normalized
 
@@ -45,8 +43,8 @@ class LoginRequest(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: str) -> str:
-        normalized = value.strip().lower()
-        if not EMAIL_PATTERN.fullmatch(normalized):
+        normalized = normalize_email(value)
+        if normalized is None:
             raise ValueError("Invalid email address.")
         return normalized
 

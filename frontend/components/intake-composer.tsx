@@ -10,6 +10,7 @@ import { FileDropzone } from "@/components/file-dropzone";
 import { ModeSwitcher } from "@/components/mode-switcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createCase, uploadCaseArtifact } from "@/lib/api";
 import {
@@ -28,6 +29,7 @@ export function IntakeComposer() {
     resolver: zodResolver(intakeSchema),
     defaultValues: {
       mode: "auto_detect",
+      contactEmail: "",
       narrative: "",
       voiceTranscript: "",
       mixedNotes: ""
@@ -39,7 +41,11 @@ export function IntakeComposer() {
     setSubmitError(null);
     try {
       const raw_input = composeRawInput(values);
-      const created = await createCase({ mode: values.mode, raw_input });
+      const created = await createCase({
+        mode: values.mode,
+        raw_input,
+        contact_email: values.contactEmail?.trim() || null
+      });
       for (const file of files) {
         await uploadCaseArtifact(created.id, file, file.type.startsWith("image/") ? "image" : "attachment");
       }
@@ -84,6 +90,16 @@ export function IntakeComposer() {
                 {...form.register("narrative")}
               />
               <FormError message={form.formState.errors.narrative?.message} />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-white">Notification email</span>
+              <Input
+                type="email"
+                aria-label="Notification email"
+                placeholder="Optional responder or patient contact"
+                {...form.register("contactEmail")}
+              />
+              <FormError message={form.formState.errors.contactEmail?.message} />
             </label>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block space-y-2">

@@ -37,5 +37,5 @@ def test_alembic_upgrade_matches_current_models(tmp_path) -> None:
     case_columns = {column["name"] for column in inspector.get_columns("cases")}
     user_columns = {column["name"] for column in inspector.get_columns("users")}
 
-    assert "owner_id" in case_columns
+    assert {"owner_id", "contact_email", "last_notification_sent_at", "last_notification_error"}.issubset(case_columns)
     assert {"email", "username", "hashed_password"}.issubset(user_columns)

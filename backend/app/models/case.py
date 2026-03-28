@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import JSON, Float, ForeignKey, Index, String, Text
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -20,6 +21,11 @@ class Case(Base, TimestampMixin):
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     structured_result_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     handoff_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    last_notification_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_notification_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     owner_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=True, index=True
     )
@@ -34,4 +40,3 @@ class Case(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="RecommendedAction.priority",
     )
-

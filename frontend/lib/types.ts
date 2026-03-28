@@ -101,10 +101,13 @@ export type CaseDetail = {
   id: string;
   mode: CaseMode;
   raw_input: string;
+  contact_email?: string | null;
   detected_case_type: DetectedCaseType;
   urgency_level: UrgencyLevel;
   confidence: number;
   handoff_summary?: string | null;
+  last_notification_sent_at?: string | null;
+  last_notification_error?: string | null;
   structured_result_json?: NormalizedAnalysisOutput | null;
   artifacts: Artifact[];
   analysis_runs: AnalysisRun[];

@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     postgres_db: str = "aegis_os"
     postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
+    postgres_password: str = ""
     cloud_sql_connection_name: str | None = None
     cloud_sql_use_connector: bool = False
     allow_demo_fallback: bool = False
@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     )
     gcs_bucket_name: str | None = None
     google_maps_api_key: str | None = None
+    gmail_client_id: str | None = None
+    gmail_client_secret: str | None = None
+    gmail_refresh_token: str | None = None
+    gmail_from_email: str | None = None
+    gmail_from_name: str = "Aegis OS"
+    gmail_send_case_notifications: bool = True
     gcs_signed_url_ttl_seconds: int = 900
 
     max_upload_size_mb: int = 20
@@ -72,7 +78,13 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
-    @field_validator("debug", "cloud_sql_use_connector", "allow_demo_fallback", mode="before")
+    @field_validator(
+        "debug",
+        "cloud_sql_use_connector",
+        "allow_demo_fallback",
+        "gmail_send_case_notifications",
+        mode="before",
+    )
     @classmethod
     def parse_booleanish(cls, value: str | bool) -> bool:
         if isinstance(value, bool):
@@ -93,8 +105,9 @@ class Settings(BaseSettings):
         if not self.database_url and not self.cloud_sql_use_connector:
             user = quote_plus(self.postgres_user)
             password = quote_plus(self.postgres_password)
+            credentials = user if not password else f"{user}:{password}"
             self.database_url = (
-                f"postgresql+psycopg://{user}:{password}@"
+                f"postgresql+psycopg://{credentials}@"
                 f"{self.postgres_server}:{self.postgres_port}/{self.postgres_db}"
             )
         if self.app_env.lower() == "production" and not self.secret_key:

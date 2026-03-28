@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.validation import normalize_email
 from app.schemas.analysis import NormalizedAnalysisOutput, RecommendedActionItem
 from app.schemas.enums import CaseMode, DetectedCaseType, UrgencyLevel
 
@@ -11,6 +12,7 @@ from app.schemas.enums import CaseMode, DetectedCaseType, UrgencyLevel
 class CaseCreate(BaseModel):
     mode: CaseMode = CaseMode.AUTO_DETECT
     raw_input: str = Field(min_length=1, max_length=8000)
+    contact_email: str | None = Field(default=None, max_length=255)
 
     @field_validator("raw_input")
     @classmethod
@@ -20,10 +22,16 @@ class CaseCreate(BaseModel):
             raise ValueError("Case intake cannot be empty.")
         return normalized
 
+    @field_validator("contact_email")
+    @classmethod
+    def normalize_contact_email(cls, value: str | None) -> str | None:
+        return normalize_email(value)
+
 
 class CaseUpdate(BaseModel):
     mode: CaseMode | None = None
     raw_input: str | None = Field(default=None, min_length=1, max_length=8000)
+    contact_email: str | None = Field(default=None, max_length=255)
 
     @field_validator("raw_input")
     @classmethod
@@ -34,6 +42,11 @@ class CaseUpdate(BaseModel):
         if len(normalized) < 1:
             raise ValueError("Case intake cannot be empty.")
         return normalized
+
+    @field_validator("contact_email")
+    @classmethod
+    def normalize_optional_email(cls, value: str | None) -> str | None:
+        return normalize_email(value)
 
 
 class ArtifactResponse(BaseModel):
@@ -79,6 +92,9 @@ class CaseSummaryResponse(BaseModel):
 
 class CaseDetailResponse(CaseSummaryResponse):
     raw_input: str
+    contact_email: str | None = None
+    last_notification_sent_at: datetime | None = None
+    last_notification_error: str | None = None
     structured_result_json: NormalizedAnalysisOutput | None = None
     artifacts: list[ArtifactResponse] = Field(default_factory=list)
     analysis_runs: list[AnalysisRunResponse] = Field(default_factory=list)
@@ -87,6 +103,15 @@ class CaseDetailResponse(CaseSummaryResponse):
 
 class AnalyzeCaseRequest(BaseModel):
     mode_override: CaseMode | None = None
+
+
+class EmailNotificationRequest(BaseModel):
+    recipient_email: str | None = Field(default=None, max_length=255)
+
+    @field_validator("recipient_email")
+    @classmethod
+    def normalize_optional_email(cls, value: str | None) -> str | None:
+        return normalize_email(value)
 
 
 class CaseDeleteResponse(BaseModel):

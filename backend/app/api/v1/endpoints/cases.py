@@ -13,10 +13,11 @@ from app.schemas.case import (
     CaseDetailResponse,
     CaseSummaryResponse,
     CaseUpdate,
+    EmailNotificationRequest,
     ExportJSONResponse,
 )
 from app.services.artifact_service import ArtifactService
-from app.services.case_service import CaseService
+from app.services.case_service import UNSET, CaseService
 from app.services.export_service import ExportService
 
 router = APIRouter()
@@ -68,6 +69,7 @@ def update_case(
             case_id,
             mode=payload.mode,
             raw_input=payload.raw_input,
+            contact_email=payload.contact_email if "contact_email" in payload.model_fields_set else UNSET,
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -129,6 +131,26 @@ def analyze_case(
     return CaseDetailResponse.model_validate(_serialize_case(case))
 
 
+@router.post("/{case_id}/notify/email", response_model=CaseDetailResponse)
+def notify_case_email(
+    case_id: str,
+    payload: EmailNotificationRequest | None = None,
+    db: Session = Depends(get_db),
+    service: CaseService = Depends(get_case_service),
+) -> CaseDetailResponse:
+    try:
+        case = service.send_case_email(
+            db,
+            case_id,
+            payload.recipient_email if payload else None,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return CaseDetailResponse.model_validate(_serialize_case(case))
+
+
 @router.get("/{case_id}/export/json", response_model=ExportJSONResponse)
 def export_json(
     case_id: str,
@@ -177,11 +199,14 @@ def _serialize_case(case) -> dict:
         "id": case.id,
         "mode": case.mode,
         "raw_input": case.raw_input,
+        "contact_email": case.contact_email,
         "detected_case_type": case.detected_case_type,
         "urgency_level": case.urgency_level,
         "confidence": case.confidence,
         "structured_result_json": structured,
         "handoff_summary": case.handoff_summary,
+        "last_notification_sent_at": case.last_notification_sent_at,
+        "last_notification_error": case.last_notification_error,
         "created_at": case.created_at,
         "updated_at": case.updated_at,
         "artifacts": case.artifacts,

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from alembic import command
+from alembic.config import Config as AlembicConfig
 from app.api.v1.api import api_router
 from app.core.config import get_settings
 from app.core.constants import API_TAGS, APP_DESCRIPTION
@@ -25,10 +28,23 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    """Create database tables before serving requests."""
-    Base.metadata.create_all(bind=engine)
+    """Apply schema bootstrap before serving requests."""
+    _initialize_schema()
     logger.info("Aegis OS backend started in %s mode", settings.app_env)
     yield
+
+
+def _initialize_schema() -> None:
+    if settings.app_env.lower() == "test" or settings.cloud_sql_use_connector:
+        Base.metadata.create_all(bind=engine)
+        return
+
+    alembic_root = Path(__file__).resolve().parents[1]
+    alembic_config = AlembicConfig(str(alembic_root / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(alembic_root / "alembic"))
+    if settings.database_url:
+        alembic_config.set_main_option("sqlalchemy.url", settings.database_url)
+    command.upgrade(alembic_config, "head")
 
 app = FastAPI(
     title=settings.app_name,

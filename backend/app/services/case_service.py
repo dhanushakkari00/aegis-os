@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -14,17 +15,22 @@ from app.models.recommended_action import RecommendedAction
 from app.schemas.analysis import NormalizedAnalysisOutput
 from app.schemas.case import CaseCreate
 from app.schemas.enums import AnalysisRunStatus, CaseMode, DetectedCaseType, UrgencyLevel
+from app.services.gmail_service import GmailService
+
+UNSET = object()
 
 
 class CaseService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.orchestrator = AIOrchestrator(settings)
+        self.gmail_service = GmailService(settings)
 
     def create_case(self, db: Session, payload: CaseCreate) -> Case:
         case = Case(
             mode=payload.mode.value,
             raw_input=payload.raw_input,
+            contact_email=payload.contact_email,
             detected_case_type=DetectedCaseType.UNCLEAR.value,
             urgency_level=UrgencyLevel.MODERATE.value,
             confidence=0.0,
@@ -38,6 +44,7 @@ class CaseService:
         statement = (
             select(Case)
             .options(
+                selectinload(Case.owner),
                 selectinload(Case.artifacts),
                 selectinload(Case.analysis_runs),
                 selectinload(Case.recommended_actions),
@@ -57,12 +64,22 @@ class CaseService:
         )
         return list(db.scalars(statement).unique())
 
-    def update_case(self, db: Session, case_id: str, *, mode: CaseMode | None, raw_input: str | None) -> Case:
+    def update_case(
+        self,
+        db: Session,
+        case_id: str,
+        *,
+        mode: CaseMode | None,
+        raw_input: str | None,
+        contact_email: str | None | object = UNSET,
+    ) -> Case:
         case = self.get_case(db, case_id)
         if mode is not None:
             case.mode = mode.value
         if raw_input is not None:
             case.raw_input = raw_input
+        if contact_email is not UNSET:
+            case.contact_email = contact_email
         db.commit()
         return self.get_case(db, case_id)
 
@@ -140,11 +157,26 @@ class CaseService:
 
         self._replace_recommended_actions(db, case, output)
         db.commit()
+        db.refresh(case)
+        self._send_analysis_notification(db, case)
         return self.get_case(db, case.id)
 
     def seed_case(self, db: Session, *, mode: CaseMode, raw_input: str) -> Case:
         created = self.create_case(db, CaseCreate(mode=mode, raw_input=raw_input))
         return self.analyze_case(db, created.id)
+
+    def send_case_email(self, db: Session, case_id: str, recipient_email: str | None = None) -> Case:
+        case = self.get_case(db, case_id)
+        if recipient_email is not None:
+            case.contact_email = recipient_email
+            db.commit()
+            db.refresh(case)
+        if not (case.contact_email or (case.owner.email if case.owner else None)):
+            raise ValueError("No recipient email is stored for this case.")
+        if not case.structured_result_json:
+            raise ValueError("Analyze the case before sending a handoff email.")
+        self._send_analysis_notification(db, case, force=True)
+        return self.get_case(db, case_id)
 
     def _replace_recommended_actions(
         self,
@@ -168,3 +200,20 @@ class CaseService:
                     is_immediate=action.is_immediate,
                 )
             )
+
+    def _send_analysis_notification(self, db: Session, case: Case, *, force: bool = False) -> None:
+        recipient_email = case.contact_email or (case.owner.email if case.owner else None)
+        if not recipient_email or not case.structured_result_json:
+            return
+        if not force and not self.gmail_service.is_configured():
+            case.last_notification_error = "Gmail notifications are not configured."
+            db.commit()
+            return
+
+        result = self.gmail_service.send_case_summary(case=case, recipient_email=recipient_email)
+        if result.delivered:
+            case.last_notification_sent_at = datetime.now(UTC)
+            case.last_notification_error = None
+        else:
+            case.last_notification_error = result.error
+        db.commit()

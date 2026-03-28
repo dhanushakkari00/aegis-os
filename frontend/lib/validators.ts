@@ -6,6 +6,12 @@ export const intakeSchema = z
   .object({
     mode: z.enum(caseModes),
     narrative: z.string().trim().min(10, "Describe the incident or symptoms in more detail."),
+    contactEmail: z
+      .string()
+      .trim()
+      .email("Enter a valid email address.")
+      .optional()
+      .or(z.literal("")),
     voiceTranscript: z.string().trim().optional(),
     mixedNotes: z.string().trim().optional()
   })
@@ -30,4 +36,3 @@ export function composeRawInput(values: IntakeFormValues) {
 
   return sections.join("\n\n").trim();
 }
-

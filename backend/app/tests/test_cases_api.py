@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.seed import DISASTER_DEMO, MEDICAL_DEMO
+from app.services.gmail_service import EmailDeliveryResult, GmailService
 
 
 def test_create_and_analyze_medical_case(client) -> None:
@@ -72,3 +73,74 @@ def test_dashboard_summary(client) -> None:
     payload = summary_response.json()
     assert len(payload["totals"]) == 3
     assert len(payload["severity_distribution"]) == 4
+
+
+def test_analyze_case_sends_gmail_handoff_when_contact_email_exists(client, monkeypatch) -> None:
+    deliveries: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(GmailService, "is_configured", lambda self: True)
+
+    def fake_send(self, *, case, recipient_email):
+        deliveries.append((case.id, recipient_email))
+        return EmailDeliveryResult(delivered=True, provider_message_id="gmail-message-id")
+
+    monkeypatch.setattr(GmailService, "send_case_summary", fake_send)
+
+    create_response = client.post(
+        "/api/v1/cases",
+        json={
+            "mode": "medical_triage",
+            "raw_input": MEDICAL_DEMO,
+            "contact_email": "ops@example.com",
+        },
+    )
+    case_id = create_response.json()["id"]
+
+    analyze_response = client.post(f"/api/v1/cases/{case_id}/analyze", json={})
+    assert analyze_response.status_code == 200
+    payload = analyze_response.json()
+    assert payload["contact_email"] == "ops@example.com"
+    assert payload["last_notification_sent_at"] is not None
+    assert payload["last_notification_error"] is None
+    assert deliveries == [(case_id, "ops@example.com")]
+
+
+def test_notify_email_endpoint_resends_case_handoff(client, monkeypatch) -> None:
+    deliveries: list[str] = []
+
+    monkeypatch.setattr(GmailService, "is_configured", lambda self: True)
+
+    def fake_send(self, *, case, recipient_email):
+        deliveries.append(recipient_email)
+        return EmailDeliveryResult(delivered=True, provider_message_id="gmail-message-id")
+
+    monkeypatch.setattr(GmailService, "send_case_summary", fake_send)
+
+    create_response = client.post(
+        "/api/v1/cases",
+        json={
+            "mode": "medical_triage",
+            "raw_input": MEDICAL_DEMO,
+            "contact_email": "ops@example.com",
+        },
+    )
+    case_id = create_response.json()["id"]
+    client.post(f"/api/v1/cases/{case_id}/analyze", json={})
+
+    resend_response = client.post(f"/api/v1/cases/{case_id}/notify/email", json={})
+    assert resend_response.status_code == 200
+    payload = resend_response.json()
+    assert payload["last_notification_sent_at"] is not None
+    assert deliveries == ["ops@example.com", "ops@example.com"]
+
+
+def test_notify_email_endpoint_requires_recipient_email(client) -> None:
+    create_response = client.post(
+        "/api/v1/cases",
+        json={"mode": "medical_triage", "raw_input": MEDICAL_DEMO},
+    )
+    case_id = create_response.json()["id"]
+
+    resend_response = client.post(f"/api/v1/cases/{case_id}/notify/email", json={})
+    assert resend_response.status_code == 400
+    assert resend_response.json()["detail"] == "No recipient email is stored for this case."

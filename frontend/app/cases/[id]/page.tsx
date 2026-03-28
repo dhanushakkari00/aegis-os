@@ -11,14 +11,17 @@ import { RecommendationCard } from "@/components/recommendation-card";
 import { ResourcePanel } from "@/components/resource-panel";
 import { TimelinePanel } from "@/components/timeline-panel";
 import { UrgencyBadge } from "@/components/urgency-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getCase,
   getCaseResourceMapUrl,
   getNearbyResources,
+  sendCaseEmailNotification,
   type NearbySearchResult
 } from "@/lib/api";
 import type { CaseDetail } from "@/lib/types";
+import { formatTimestamp } from "@/lib/utils";
 
 export default function CaseDetailPage() {
   const params = useParams<{ id: string }>();
@@ -26,6 +29,7 @@ export default function CaseDetailPage() {
   const [caseData, setCaseData] = useState<CaseDetail | null>(null);
   const [resourceData, setResourceData] = useState<NearbySearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,6 +152,52 @@ export default function CaseDetailPage() {
             </div>
             <div className="space-y-6">
               <ConfidenceMeter confidence={caseData.confidence} />
+              {caseData.contact_email ? (
+                <Card>
+                  <CardHeader>
+                    <div>
+                      <CardTitle>Notification Delivery</CardTitle>
+                      <CardDescription>
+                        Gmail handoff delivery for the stored case contact.
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
+                  <div className="space-y-3 px-6 pb-6 text-sm text-slate-300">
+                    <p>
+                      <span className="font-medium text-white">Recipient:</span>{" "}
+                      {caseData.contact_email}
+                    </p>
+                    <p>
+                      <span className="font-medium text-white">Status:</span>{" "}
+                      {caseData.last_notification_sent_at
+                        ? `Sent ${formatTimestamp(caseData.last_notification_sent_at)}`
+                        : caseData.last_notification_error ?? "Pending configuration"}
+                    </p>
+                    <div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={sendingEmail}
+                        onClick={async () => {
+                          setSendingEmail(true);
+                          try {
+                            const updated = await sendCaseEmailNotification(caseId);
+                            setCaseData(updated);
+                            setError(null);
+                          } catch (err) {
+                            setError(err instanceof Error ? err.message : "Unable to send email.");
+                          } finally {
+                            setSendingEmail(false);
+                          }
+                        }}
+                      >
+                        {sendingEmail ? "Sending..." : "Resend handoff email"}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ) : null}
               <Card>
                 <CardHeader>
                   <div>

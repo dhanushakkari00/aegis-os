@@ -87,6 +87,9 @@ Create the remaining runtime secrets the same way:
 printf '%s' 'YOUR_DATABASE_URL' | gcloud secrets create aegis-database-url --data-file=-
 printf '%s' 'YOUR_SECRET_KEY' | gcloud secrets create aegis-secret-key --data-file=-
 printf '%s' 'YOUR_GOOGLE_MAPS_API_KEY' | gcloud secrets create aegis-google-maps-api-key --data-file=-
+printf '%s' 'YOUR_GMAIL_CLIENT_ID' | gcloud secrets create aegis-gmail-client-id --data-file=-
+printf '%s' 'YOUR_GMAIL_CLIENT_SECRET' | gcloud secrets create aegis-gmail-client-secret --data-file=-
+printf '%s' 'YOUR_GMAIL_REFRESH_TOKEN' | gcloud secrets create aegis-gmail-refresh-token --data-file=-
 ```
 
 If they already exist, add new versions instead:
@@ -95,6 +98,9 @@ If they already exist, add new versions instead:
 printf '%s' 'YOUR_DATABASE_URL' | gcloud secrets versions add aegis-database-url --data-file=-
 printf '%s' 'YOUR_SECRET_KEY' | gcloud secrets versions add aegis-secret-key --data-file=-
 printf '%s' 'YOUR_GOOGLE_MAPS_API_KEY' | gcloud secrets versions add aegis-google-maps-api-key --data-file=-
+printf '%s' 'YOUR_GMAIL_CLIENT_ID' | gcloud secrets versions add aegis-gmail-client-id --data-file=-
+printf '%s' 'YOUR_GMAIL_CLIENT_SECRET' | gcloud secrets versions add aegis-gmail-client-secret --data-file=-
+printf '%s' 'YOUR_GMAIL_REFRESH_TOKEN' | gcloud secrets versions add aegis-gmail-refresh-token --data-file=-
 ```
 
 ## Deploy Backend
@@ -109,8 +115,8 @@ gcloud run deploy aegis-os-backend \
   --allow-unauthenticated \
   --cpu 1 \
   --memory 1Gi \
-  --set-env-vars APP_ENV=production,FRONTEND_ORIGIN=https://FRONTEND_URL_PLACEHOLDER,GOOGLE_GENAI_MODEL=gemini-2.5-flash \
-  --set-secrets DATABASE_URL=aegis-database-url:latest,SECRET_KEY=aegis-secret-key:latest,GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest,GOOGLE_MAPS_API_KEY=aegis-google-maps-api-key:latest
+  --set-env-vars APP_ENV=production,FRONTEND_ORIGIN=https://FRONTEND_URL_PLACEHOLDER,GOOGLE_GENAI_MODEL=gemini-2.5-flash,GMAIL_FROM_EMAIL=alerts@example.com,GMAIL_FROM_NAME=Aegis\ OS \
+  --set-secrets DATABASE_URL=aegis-database-url:latest,SECRET_KEY=aegis-secret-key:latest,GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest,GOOGLE_MAPS_API_KEY=aegis-google-maps-api-key:latest,GMAIL_CLIENT_ID=aegis-gmail-client-id:latest,GMAIL_CLIENT_SECRET=aegis-gmail-client-secret:latest,GMAIL_REFRESH_TOKEN=aegis-gmail-refresh-token:latest
 ```
 
 ## Deploy Frontend
@@ -170,8 +176,8 @@ gcloud run deploy aegis-os \
   --allow-unauthenticated \
   --cpu 1 \
   --memory 1Gi \
-  --set-env-vars APP_ENV=production,FRONTEND_ORIGIN=https://SERVICE_URL_PLACEHOLDER,GOOGLE_GENAI_MODEL=gemini-2.5-flash \
-  --set-secrets DATABASE_URL=aegis-database-url:latest,SECRET_KEY=aegis-secret-key:latest,GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest,GOOGLE_MAPS_API_KEY=aegis-google-maps-api-key:latest
+  --set-env-vars APP_ENV=production,FRONTEND_ORIGIN=https://SERVICE_URL_PLACEHOLDER,GOOGLE_GENAI_MODEL=gemini-2.5-flash,GMAIL_FROM_EMAIL=alerts@example.com,GMAIL_FROM_NAME=Aegis\ OS \
+  --set-secrets DATABASE_URL=aegis-database-url:latest,SECRET_KEY=aegis-secret-key:latest,GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest,GOOGLE_MAPS_API_KEY=aegis-google-maps-api-key:latest,GMAIL_CLIENT_ID=aegis-gmail-client-id:latest,GMAIL_CLIENT_SECRET=aegis-gmail-client-secret:latest,GMAIL_REFRESH_TOKEN=aegis-gmail-refresh-token:latest
 ```
 
 ## Fastest Console Path
@@ -185,8 +191,9 @@ If you are using the Cloud Run web UI with GitHub continuous deployment:
 5. Set container port to `8080`.
 6. In `Variables & Secrets`:
    - add plain env vars: `APP_ENV=production`, `GOOGLE_GENAI_MODEL=gemini-2.5-flash`
+   - add plain env vars: `APP_ENV=production`, `GOOGLE_GENAI_MODEL=gemini-2.5-flash`, `GMAIL_FROM_EMAIL=alerts@example.com`, `GMAIL_FROM_NAME=Aegis OS`
    - add `FRONTEND_ORIGIN` after the first deploy, using your Cloud Run service URL
-   - add secrets for `DATABASE_URL`, `SECRET_KEY`, `GOOGLE_GENAI_API_KEY`, `GEMINI_API_KEY`, and `GOOGLE_MAPS_API_KEY`
+   - add secrets for `DATABASE_URL`, `SECRET_KEY`, `GOOGLE_GENAI_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_MAPS_API_KEY`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN`
 
 That is enough to deploy without committing `.env`.
 

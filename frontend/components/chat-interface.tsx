@@ -16,6 +16,7 @@ import {
 import { ResourcePanel } from "@/components/resource-panel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { UrgencyBadge } from "@/components/urgency-badge";
 import {
   analyzeCase,
@@ -123,6 +124,7 @@ export function ChatInterface() {
   const [activeCase, setActiveCase] = useState<CaseDetail | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [contactEmail, setContactEmail] = useState("");
   const [capturedLocation, setCapturedLocation] = useState<CapturedLocation | null>(null);
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -146,6 +148,7 @@ export function ChatInterface() {
     setInput("");
     setFiles([]);
     setCapturedLocation(null);
+    setContactEmail("");
     setError(null);
   };
 
@@ -215,6 +218,7 @@ export function ChatInterface() {
 
     const activeMode = overrideMode ?? mode;
     const continuingExistingCase = Boolean(activeCase) && !forceNewCase;
+    const resolvedContactEmail = contactEmail.trim() || activeCase?.contact_email || null;
     const textOnlyFallback = capturedLocation
       ? "Current location shared for emergency analysis."
       : buildArtifactOnlyMessage(files);
@@ -246,6 +250,7 @@ export function ChatInterface() {
       const targetCase = continuingExistingCase && activeCase
         ? await updateCase(activeCase.id, {
             mode: activeMode,
+            contact_email: resolvedContactEmail,
             raw_input: buildFollowUpIntake(
               activeCase.raw_input,
               latestTurnText,
@@ -253,7 +258,11 @@ export function ChatInterface() {
               capturedLocation
             )
           })
-        : await createCase({ mode: activeMode, raw_input: intakeText });
+        : await createCase({
+            mode: activeMode,
+            raw_input: intakeText,
+            contact_email: resolvedContactEmail
+          });
 
       for (const file of files) {
         const artifactType = file.type.startsWith("image/")
@@ -270,6 +279,7 @@ export function ChatInterface() {
 
       const analyzed = await analyzeCase(targetCase.id, activeMode);
       setActiveCase(analyzed);
+      setContactEmail(analyzed.contact_email ?? "");
 
       let nearbyData: NearbySearchResult | null = null;
       if (
@@ -514,6 +524,20 @@ export function ChatInterface() {
                     </p>
                   </Card>
 
+                  {msg.caseData.contact_email ? (
+                    <Card className="border-white/10 bg-white/5 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-cyan mb-2">
+                        Notification Email
+                      </p>
+                      <p className="text-sm text-slate-200">{msg.caseData.contact_email}</p>
+                      <p className="mt-2 text-xs text-slate-400">
+                        {msg.caseData.last_notification_sent_at
+                          ? `Handoff email sent after analysis.`
+                          : msg.caseData.last_notification_error ?? "Email will be sent when Gmail is configured."}
+                      </p>
+                    </Card>
+                  ) : null}
+
                   {msg.caseData.structured_result_json?.final_verdict ? (
                     <Card className="p-4">
                       <p className="text-xs uppercase tracking-[0.24em] text-signal mb-2">
@@ -749,6 +773,17 @@ export function ChatInterface() {
             </Button>
           </div>
         ) : null}
+
+        <div className="mb-3">
+          <Input
+            type="email"
+            value={contactEmail}
+            onChange={(event) => setContactEmail(event.target.value)}
+            placeholder="Optional email for automated handoff delivery"
+            aria-label="Notification email"
+            disabled={sending}
+          />
+        </div>
 
         <div className="flex items-center gap-2">
           {/* Mode selector */}
