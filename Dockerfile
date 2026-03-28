@@ -45,7 +45,7 @@ COPY --from=frontend-build /app/node_modules ./node_modules
 COPY --from=frontend-build /app/next.config.ts ./next.config.ts
 
 # ── Nginx config ─────────────────────────────
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf.template
 
 # ── Startup script ───────────────────────────
 COPY start.sh /app/start.sh

@@ -6,9 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
 
-COPY . /app
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r /app/requirements.txt
 
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -e .[dev]
+COPY . /app
 
 EXPOSE 8080
 

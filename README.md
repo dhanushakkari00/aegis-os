@@ -71,6 +71,7 @@ These sample texts are useful for verification and backend seeding, but the app 
 
 - Gemini credentials remain server-side only
 - `SECRET_KEY` is required explicitly in production for auth token signing
+- Keep `.env` local only. Do not commit it to GitHub. Use Cloud Run env vars and Secret Manager for deployed services.
 - File MIME and size validation are enforced in the backend
 - Structured outputs are schema-validated before persistence
 - Logs avoid raw sensitive payload dumping

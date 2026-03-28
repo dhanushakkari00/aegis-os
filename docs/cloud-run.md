@@ -9,6 +9,24 @@ Two deployment shapes are now supported:
 
 Use the combined image when you need the fastest hackathon deployment. Use two services when you want independent scaling or separate release cadence.
 
+## Keep Secrets Out Of Git
+
+Do not deploy by committing `.env` to GitHub.
+
+- Keep `.env` only on your machine.
+- Put deployed secrets in Secret Manager.
+- Attach those secrets to Cloud Run as runtime environment variables.
+
+If `.env` was ever committed, remove it from tracking and rotate the exposed credentials:
+
+```bash
+git rm --cached .env
+git commit -m "Stop tracking local env file"
+git push
+```
+
+If the file was pushed in an earlier commit, rotate the database password, Gemini key, and Google Maps key. Removing the latest file alone does not erase the old secret from git history.
+
 ## Important Constraint
 
 The backend is now Postgres-first. On Cloud Run, use Cloud SQL Postgres for persistence and avoid filesystem-backed databases entirely.
@@ -63,6 +81,22 @@ If the secret already exists:
 printf '%s' 'YOUR_GEMINI_API_KEY' | gcloud secrets versions add aegis-gemini-api-key --data-file=-
 ```
 
+Create the remaining runtime secrets the same way:
+
+```bash
+printf '%s' 'YOUR_DATABASE_URL' | gcloud secrets create aegis-database-url --data-file=-
+printf '%s' 'YOUR_SECRET_KEY' | gcloud secrets create aegis-secret-key --data-file=-
+printf '%s' 'YOUR_GOOGLE_MAPS_API_KEY' | gcloud secrets create aegis-google-maps-api-key --data-file=-
+```
+
+If they already exist, add new versions instead:
+
+```bash
+printf '%s' 'YOUR_DATABASE_URL' | gcloud secrets versions add aegis-database-url --data-file=-
+printf '%s' 'YOUR_SECRET_KEY' | gcloud secrets versions add aegis-secret-key --data-file=-
+printf '%s' 'YOUR_GOOGLE_MAPS_API_KEY' | gcloud secrets versions add aegis-google-maps-api-key --data-file=-
+```
+
 ## Deploy Backend
 
 Cloud SQL-backed deployment:
@@ -75,8 +109,8 @@ gcloud run deploy aegis-os-backend \
   --allow-unauthenticated \
   --cpu 1 \
   --memory 1Gi \
-  --set-env-vars APP_ENV=production,FRONTEND_ORIGIN=https://FRONTEND_URL_PLACEHOLDER,GOOGLE_GENAI_MODEL=gemini-2.5-flash,DATABASE_URL=postgresql+psycopg://DB_USER:DB_PASSWORD@DB_HOST:5432/DB_NAME \
-  --set-secrets GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest
+  --set-env-vars APP_ENV=production,FRONTEND_ORIGIN=https://FRONTEND_URL_PLACEHOLDER,GOOGLE_GENAI_MODEL=gemini-2.5-flash \
+  --set-secrets DATABASE_URL=aegis-database-url:latest,SECRET_KEY=aegis-secret-key:latest,GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest,GOOGLE_MAPS_API_KEY=aegis-google-maps-api-key:latest
 ```
 
 ## Deploy Frontend
@@ -136,9 +170,25 @@ gcloud run deploy aegis-os \
   --allow-unauthenticated \
   --cpu 1 \
   --memory 1Gi \
-  --set-env-vars APP_ENV=production,DATABASE_URL=postgresql+psycopg://DB_USER:DB_PASSWORD@DB_HOST:5432/DB_NAME \
-  --set-secrets GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest
+  --set-env-vars APP_ENV=production,FRONTEND_ORIGIN=https://SERVICE_URL_PLACEHOLDER,GOOGLE_GENAI_MODEL=gemini-2.5-flash \
+  --set-secrets DATABASE_URL=aegis-database-url:latest,SECRET_KEY=aegis-secret-key:latest,GOOGLE_GENAI_API_KEY=aegis-gemini-api-key:latest,GEMINI_API_KEY=aegis-gemini-api-key:latest,GOOGLE_MAPS_API_KEY=aegis-google-maps-api-key:latest
 ```
+
+## Fastest Console Path
+
+If you are using the Cloud Run web UI with GitHub continuous deployment:
+
+1. Select your GitHub repo.
+2. Set branch to `^main$`.
+3. Choose `Dockerfile`.
+4. Set source location to `/Dockerfile` for the combined service.
+5. Set container port to `8080`.
+6. In `Variables & Secrets`:
+   - add plain env vars: `APP_ENV=production`, `GOOGLE_GENAI_MODEL=gemini-2.5-flash`
+   - add `FRONTEND_ORIGIN` after the first deploy, using your Cloud Run service URL
+   - add secrets for `DATABASE_URL`, `SECRET_KEY`, `GOOGLE_GENAI_API_KEY`, `GEMINI_API_KEY`, and `GOOGLE_MAPS_API_KEY`
+
+That is enough to deploy without committing `.env`.
 
 ## Useful Commands
 

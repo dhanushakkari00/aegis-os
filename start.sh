@@ -2,6 +2,9 @@
 set -e
 
 echo "Starting Aegis OS (combined mode)..."
+PORT="${PORT:-8080}"
+
+sed "s/__PORT__/${PORT}/g" /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
 # Start FastAPI backend
 cd /app/backend
