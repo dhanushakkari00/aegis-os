@@ -7,6 +7,8 @@
 # ── Stage 1: Build the Next.js frontend ──────
 FROM node:22-alpine AS frontend-build
 WORKDIR /app
+ENV NEXT_PUBLIC_API_BASE_URL=/api/v1
+ENV NEXT_PUBLIC_APP_NAME="Aegis OS"
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci
 COPY frontend/ ./
